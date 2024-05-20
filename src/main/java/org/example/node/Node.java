@@ -4,9 +4,11 @@ import org.example.Main;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -20,7 +22,7 @@ public class Node {
     Socket clientSocket = null;
     InetAddress inetAddress;
 
-    private String data, publicKey, privateKey, keyDate;
+    private String data, publicKey, privateKey, hashPublicKey, hashPrivateKey, date;
     int portNumber = 8080;
 
     public void runningNode() throws IOException {
@@ -46,14 +48,30 @@ public class Node {
                 main.inputData = in.readLine();
                 if (main.inputData != null) {
                     main.jsonObject = new JSONObject(main.inputData);
+                    //making new object for make json structure
+                    date = main.jsonObject.getString("date");
+                    data = main.jsonObject.getString("data");
                     publicKey = main.jsonObject.getString("public-key");
                     privateKey = main.jsonObject.getString("private-key");
-                    data = main.jsonObject.getString("data");
+                    //get value based on key json on main.inputData
+
+                    hashPublicKey = toHexString(getSHA256(publicKey));
+                    hashPrivateKey = toHexString(getSHA256(privateKey));
+                    //string to key
+
+                    main.jsonObject.put("public-key", hashPublicKey);
+                    main.jsonObject.put("private-key", hashPrivateKey);
+                    //set value json for making text json structure
                     String signedStr = signData(stringToPrivateKey(privateKey), data);
+                    String nameBlock = hashPublicKey+".txt";
+                    boolean checkBlockFile = new File(System. getProperty("user. dir"), nameBlock).exists();
+                    if (checkBlockFile == false){
                     if (verifySignature(stringToPublicKey(publicKey), data, signedStr)) {
                         System.out.println("finnaly yours data is true :) ");
-                        String nameBlock = "herdi.txt";
+                        //from hex to string we can call this = valueX
+                        //valueX convert to hash256 for get value string to hash256
                         FileWriter fileWriter = new FileWriter(nameBlock);
+                        main.inputData = main.jsonObject.toString();
                         fileWriter.write(main.inputData);
                         main.file = new File(nameBlock);
                         System.out.println("created at : " + main.file.getAbsolutePath());
@@ -61,9 +79,12 @@ public class Node {
 //                System.out.println("Received data: " + inputData);
 
                         // Respond to client
-                        out.println("Data received successfully.");
+                        out.println("Data received successfully."+"\nfinnaly yours data is true :) \n");
                     }else {
                         System.out.println("yours key is false");
+                    }
+                    }else {
+                        out.println("yours data is exist, please try another day");
                     }
                 } else {
                     System.out.println("yours data not valid");
@@ -72,6 +93,34 @@ public class Node {
                 System.out.println("Error: " + e.getMessage());
             }
         }
+    }
+
+    public static byte[] getSHA256(String input) throws NoSuchAlgorithmException
+    {
+        // Static getInstance method is called with hashing SHA
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+
+        // digest() method called
+        // to calculate message digest of an input
+        // and return array of byte
+        return md.digest(input.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public static String toHexString(byte[] hash)
+    {
+        // Convert byte array into signum representation
+        BigInteger number = new BigInteger(1, hash);
+
+        // Convert message digest into hex value
+        StringBuilder hexString = new StringBuilder(number.toString(16));
+
+        // Pad with leading zeros
+        while (hexString.length() < 64)
+        {
+            hexString.insert(0, '0');
+        }
+
+        return hexString.toString();
     }
 
     public String signData(PrivateKey privateKey, String data) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {

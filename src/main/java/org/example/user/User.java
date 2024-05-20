@@ -15,7 +15,7 @@ import java.util.TimeZone;
 public class User {
     Main main = new Main();
 
-    String serverAddress = "192.168.100.135";
+    String serverAddress = "192.168.43.135";
     int serverPort = 8080;
 
     public void checkConnection() {
@@ -36,13 +36,13 @@ public class User {
     public void sendingData(String nameFile, String data) {
         main.jsonObject = new JSONObject();
         main.jsonObject.put("date", getDate());
+        main.jsonObject.put("data", data);
         try {
             main.jsonObject.put("public-key", getPublicKeyStringFromJSONFile(nameFile));
             main.jsonObject.put("private-key", getPrivateKeyStringFromJSONFile(nameFile));
         } catch (Exception e) {
             System.out.println(e);
         }
-        main.jsonObject.put("data", data);
         main.inputData = main.jsonObject.toString();
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(serverAddress, serverPort), 5000); // 5000 milliseconds timeout for connection
@@ -57,7 +57,7 @@ public class User {
             try {
                 String response = in.readLine();
                 if (response != null) {
-                    System.out.println("Response from server: " + response);
+                    System.out.println("Response : " + response);
                 } else {
                     System.out.println("No response from server within 2 seconds.");
                 }
