@@ -14,7 +14,6 @@ import java.util.TimeZone;
 public class User {
     JSONObject jsonObject;
     String serverAddress = "192.168.100.135", inputData;
-    String serverAddresss = "192.168.100.135";
     int serverPort = 8080;
 
     public void checkConnection() {
