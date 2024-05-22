@@ -4,10 +4,7 @@ import org.example.Main;
 import org.json.JSONObject;
 
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.TimeZone;
@@ -15,11 +12,12 @@ import java.util.TimeZone;
 public class User {
     Main main = new Main();
 
-    String serverAddress = "192.168.43.135";
+    String serverAddress = "192.168.1.124";
     int serverPort = 8080;
 
     public void checkConnection() {
         try (
+
                 Socket socket = new Socket(serverAddress, serverPort);
 //                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
         ) {
