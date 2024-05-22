@@ -2,6 +2,7 @@ package org.example.node;
 
 import org.example.Main;
 import org.example.data.Block;
+import org.example.user.User;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -9,11 +10,17 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.*;
+import java.text.ParseException;
+import java.time.LocalTime;
 import java.util.Base64;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class Node {
     Main main = new Main();
     Block block = new Block();
+    User user = new User();
 
     ServerSocket serverSocket = null;
     Socket clientSocket = null;
@@ -21,8 +28,20 @@ public class Node {
 
     private String data, publicKey, privateKey, hashPublicKey, hashPrivateKey, date;
     int portNumber = 8080;
+    private ScheduledExecutorService scheduler;
 
-    public void runningNode() throws IOException {
+    public void startBlockScheduler() {
+        scheduler = Executors.newScheduledThreadPool(1);
+        Runnable blockTask = new Runnable() {
+            @Override
+            public void run() {
+                block.createBlock(new File(System.getProperty("user.dir")));
+            }
+        };
+        scheduler.scheduleAtFixedRate(blockTask, 1, 1, TimeUnit.MINUTES);
+    }
+
+    public void runningNode() throws IOException, ParseException {
         System.out.println("recomended : 8080 (default) / 443 (root)");
         System.out.print("input your port : ");
         portNumber = main.scanner.nextInt();
@@ -33,6 +52,8 @@ public class Node {
         inetAddress = InetAddress.getLocalHost();
         serverSocket = new ServerSocket(portNumber);
         System.out.println("Server running at: " + inetAddress.getHostAddress() + " port : " + portNumber);
+        System.out.println("running : "+user.getDate());
+//        System.out.println("block created : "+block.checkTime(block.getTimeNow()));
         //port for server
         while (true) {
             try {
@@ -61,6 +82,7 @@ public class Node {
                     //set value json for making text json structure
                     String signedStr = block.signData(block.stringToPrivateKey(privateKey), data);
                     String nameBlock = hashPublicKey + ".txt";
+                    main.file = new File(nameBlock);
                     boolean checkBlockFile = new File(System.getProperty("user. dir"), nameBlock).exists();
                     if (checkBlockFile == false) {
                         if (block.verifySignature(block.stringToPublicKey(publicKey), data, signedStr)) {
@@ -70,11 +92,8 @@ public class Node {
                             FileWriter fileWriter = new FileWriter(nameBlock);
                             main.inputData = main.jsonObject.toString();
                             fileWriter.write(main.inputData);
-                            main.file = new File(nameBlock);
                             System.out.println("created at : " + main.file.getAbsolutePath());
-                            block.checkBlock(main.file.getAbsolutePath());
                             fileWriter.close();
-
                             // Respond to client
                             out.println("Data received successfully." + "\nfinnaly yours data is true :) \n");
                         } else {

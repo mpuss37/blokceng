@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.data.Block;
 import org.example.node.Node;
 import org.example.user.KeyPairGenerator;
 import org.example.user.User;
@@ -9,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.text.ParseException;
 import java.util.Scanner;
 
 public class Main {
@@ -17,6 +19,7 @@ public class Main {
     static KeyPairGenerator keyPairGenerator = new KeyPairGenerator();
     static User user = new User();
     static Node node = new Node();
+    Block block = new Block();
 
     public static String data, publicKeyUser, privateKeyUser, date, inputData;
     public File file;
@@ -24,7 +27,7 @@ public class Main {
     public PublicKey publicKey;
     public PrivateKey privateKey;
     static public String nameFile;
-    private boolean exit, valid;
+    public boolean exit, valid;
     private int choice;
 
     private void menu(int choiceMenu){
@@ -71,6 +74,7 @@ public class Main {
                 //if exit is true, not looping
                 System.out.println("=== MENU NODE ===");
                 System.out.println("1. running-node");
+                System.out.println("2. testing");
                 System.out.println("0. exit");
                 while (!valid) {
                     //if valid is true, not looping
@@ -82,6 +86,8 @@ public class Main {
                             case 1:
                                 node.runningNode();
                                 break;
+                            case 2:
+                                break;
                             case 0:
                                 exit = true;
                                 break;
@@ -91,7 +97,7 @@ public class Main {
                         }
                     } catch (NumberFormatException e) {
                         System.out.println("the input entered is not a number, try again.");
-                    } catch (IOException e) {
+                    } catch (IOException | ParseException e) {
                         throw new RuntimeException(e);
                     }
                 }
