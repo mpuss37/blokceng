@@ -11,7 +11,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.*;
 import java.text.ParseException;
-import java.time.LocalTime;
 import java.util.Base64;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,23 +25,18 @@ public class Node {
     Socket clientSocket = null;
     InetAddress inetAddress;
 
-    private String data, publicKey, privateKey, hashPublicKey, hashPrivateKey, date;
+    private String data;
     int portNumber = 8080;
-    private ScheduledExecutorService scheduler;
 
     public void startBlockScheduler() {
-        scheduler = Executors.newScheduledThreadPool(1);
-        Runnable blockTask = new Runnable() {
-            @Override
-            public void run() {
-                block.createBlock(new File(System.getProperty("user.dir")));
-            }
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        Runnable blockTask = () -> {
         };
         scheduler.scheduleAtFixedRate(blockTask, 1, 1, TimeUnit.MINUTES);
     }
 
     public void runningNode() throws IOException, ParseException {
-        System.out.println("recomended : 8080 (default) / 443 (root)");
+        System.out.println("recommended : 8080 (default) / 443 (root)");
         System.out.print("input your port : ");
         portNumber = main.scanner.nextInt();
         if (portNumber != 443 && portNumber != 8080) {
@@ -58,23 +52,23 @@ public class Node {
         while (true) {
             try {
                 clientSocket = serverSocket.accept();
-                System.out.println("client conected: " + clientSocket.getInetAddress());
+                System.out.println("client connected: " + clientSocket.getInetAddress());
                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
                 // Read data from client
-                main.inputData = in.readLine();
-                if (main.inputData != null) {
-                    main.jsonObject = new JSONObject(main.inputData);
+                Main.inputData = in.readLine();
+                if (Main.inputData != null) {
+                    main.jsonObject = new JSONObject(Main.inputData);
                     //making new object for make json structure
-                    date = main.jsonObject.getString("date");
+                    String date = main.jsonObject.getString("date");
                     data = main.jsonObject.getString("data");
-                    publicKey = main.jsonObject.getString("public-key");
-                    privateKey = main.jsonObject.getString("private-key");
+                    String publicKey = main.jsonObject.getString("public-key");
+                    String privateKey = main.jsonObject.getString("private-key");
                     //get value based on key json on main.inputData
 
-                    hashPublicKey = block.toHexString(block.getSHA256(publicKey));
-                    hashPrivateKey = block.toHexString(block.getSHA256(privateKey));
+                    String hashPublicKey = block.toHexString(block.getSHA256(publicKey));
+                    String hashPrivateKey = block.toHexString(block.getSHA256(privateKey));
                     //string to key
 
                     main.jsonObject.put("public-key", hashPublicKey);
@@ -84,18 +78,21 @@ public class Node {
                     String nameBlock = hashPublicKey + ".txt";
                     main.file = new File(nameBlock);
                     boolean checkBlockFile = new File(System.getProperty("user. dir"), nameBlock).exists();
-                    if (checkBlockFile == false) {
+                    if (!checkBlockFile) {
                         if (block.verifySignature(block.stringToPublicKey(publicKey), data, signedStr)) {
-                            System.out.println("finnaly yours data is true :) ");
+                            System.out.println("finally yours data is true :) ");
                             //from hex to string we can call this = value X
                             // and then convert to hash256 for get value string to hash256
                             FileWriter fileWriter = new FileWriter(nameBlock);
-                            main.inputData = main.jsonObject.toString();
-                            fileWriter.write(main.inputData);
+                            Main.inputData = main.jsonObject.toString();
+                            fileWriter.write(Main.inputData);
                             System.out.println("created at : " + main.file.getAbsolutePath());
                             fileWriter.close();
                             // Respond to client
-                            out.println("Data received successfully." + "\nfinnaly yours data is true :) \n");
+                            out.println("""
+                                    Data received successfully.
+                                    finally yours data is true :)\s
+                                    """);
                         } else {
                             System.out.println("yours key is false");
                         }
