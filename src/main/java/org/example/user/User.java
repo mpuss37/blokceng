@@ -1,35 +1,49 @@
 package org.example.user;
 
-import org.example.Main;
 import org.json.JSONObject;
 
 import java.io.*;
 import java.net.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.TimeZone;
 
 public class User {
     JSONObject jsonObject;
-    String serverAddress = "192.168.100.135", inputData;
+
+    String serverAddress1 = "192.168.1.124", serverAddress2 = "192.168.100.135";
+    public String[] serverAddress = {"192.168.1.121", "192.168.1.122", "192.168.1.123", "192.168.1.100", "192.168.1.124", "192.168.100.135"};
+    String inputData;
+    boolean check;
     int serverPort = 8080;
 
-    public void checkConnection() {
-        try (
+    public boolean checkNode(String[] serverAddresses) {
+        for (String serverAddress : serverAddresses) {
+            if (checkConnection(serverAddress)) {
+                // If one connection is successful, return true
+                System.out.println("connected to " + serverAddress);
+                return true;
+            }else {
+                System.out.println("false");
+            }
+        }
+        return false;
+    }
 
-                Socket socket = new Socket(serverAddress, serverPort);
+    public boolean checkConnection(String serverAddress) {
+        try (Socket socket = new Socket(serverAddress, serverPort)) {
+            check = true;
 //                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-        ) {
             // Kirim pesan ke server
 //            out.println(data);
-            System.out.println("connected");
         } catch (UnknownHostException e) {
             System.err.println("Host not found: " + serverAddress);
+            check = false;
         } catch (IOException e) {
+            check = false;
             System.err.println("cannot connect server: " + serverAddress);
         }
+        return check;
     }
 
     public void sendingData(String nameFile, String data) {
@@ -37,15 +51,17 @@ public class User {
         jsonObject.put("date", getDate());
         jsonObject.put("data", data);
         try {
-            jsonObject.put("public-key", getPublicKeyStringFromJSONFile(nameFile));
             jsonObject.put("private-key", getPrivateKeyStringFromJSONFile(nameFile));
+            jsonObject.put("public-key", getPublicKeyStringFromJSONFile(nameFile));
         } catch (Exception e) {
             System.out.println(e);
         }
         inputData = jsonObject.toString();
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(serverAddress, serverPort), 5000); // 5000 milliseconds timeout for connection
-            socket.setSoTimeout(5000); // 2000 milliseconds timeout for reading from socket
+            //5000 milliseconds timeout for connection
+            socket.connect(new InetSocketAddress(serverAddress1, serverPort), 5000);
+            // 5000 milliseconds timeout for reading from socket
+            socket.setSoTimeout(5000);
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 

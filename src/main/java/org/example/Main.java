@@ -28,11 +28,11 @@ public class Main {
     public PrivateKey privateKey;
     static public String nameFile;
     public boolean exit, valid;
-    private int choice;
 
     private void menu(int choiceMenu){
         exit = false;
         valid = false;
+        int choice;
         if (choiceMenu == 1) {
             while (!exit) {
                 //if exit is true, not looping
@@ -51,7 +51,7 @@ public class Main {
                                 keyPairGenerator.setKey();
                                 break;
                             case 2:
-                                user.checkConnection();
+                                user.checkNode(user.serverAddress);
                                 break;
                             case 0:
                                 exit = true;
@@ -68,8 +68,6 @@ public class Main {
                 System.out.println();
             }
         } else {
-            exit = false;
-            valid = false;
             while (!exit) {
                 //if exit is true, not looping
                 System.out.println("=== MENU NODE ===");
@@ -122,7 +120,13 @@ public class Main {
             main.menu(0);
         } else if (args.length == 1 && (args[0].equals("-h") || args[0].equals("--help"))) {
             System.out.println("blokceng (version 1.0, revision 1)");
-            System.out.println("Usage:\n" + " blokceng [OPTIONS]...[VALUES]\t\n" + "  -u, --user    become a user.\n" + "  -s, --send [key] ['data']     send data to node.\n" + "  -n, --node     become a node.\n");
+            System.out.println("""
+                    Usage:
+                     blokceng [OPTIONS]...[VALUES]\t
+                      -u, --user    become a user.
+                      -s, --send [key] ['data']     send data to node.
+                      -n, --node     become a node.
+                    """);
         } else {
             System.out.println("blokceng: missing operand\n" + "Try 'blokceng -h or --help' for more information.");
         }

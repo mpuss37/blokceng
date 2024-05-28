@@ -4,7 +4,6 @@ import org.example.Main;
 import org.example.data.Block;
 import org.example.user.User;
 import org.json.JSONObject;
-
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -63,19 +62,22 @@ public class Node {
                     //making new object for make json structure
                     String date = main.jsonObject.getString("date");
                     data = main.jsonObject.getString("data");
-                    String publicKey = main.jsonObject.getString("public-key");
                     String privateKey = main.jsonObject.getString("private-key");
+                    String publicKey = main.jsonObject.getString("public-key");
                     //get value based on key json on main.inputData
 
                     String hashPublicKey = block.toHexString(block.getSHA256(publicKey));
                     String hashPrivateKey = block.toHexString(block.getSHA256(privateKey));
+                    String dataFull = date+data+hashPublicKey+hashPrivateKey;
+                    String dataHash = block.toHexString(block.getSHA256(dataFull));
                     //string to key
 
-                    main.jsonObject.put("public-key", hashPublicKey);
                     main.jsonObject.put("private-key", hashPrivateKey);
+                    main.jsonObject.put("public-key", hashPublicKey);
+                    main.jsonObject.put("hash-data", dataHash);
                     //set value json for making text json structure
                     String signedStr = block.signData(block.stringToPrivateKey(privateKey), data);
-                    String nameBlock = hashPublicKey + ".txt";
+                    String nameBlock = hashPublicKey + ".her";
                     main.file = new File(nameBlock);
                     boolean checkBlockFile = new File(System.getProperty("user. dir"), nameBlock).exists();
                     if (!checkBlockFile) {
