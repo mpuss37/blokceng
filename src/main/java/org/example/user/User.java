@@ -17,17 +17,17 @@ public class User {
     boolean check;
     int serverPort = 8080;
 
-    public boolean checkNode(String[] serverAddresses) {
+    public String checkNode(String[] serverAddresses, String inputData) {
         for (String serverAddress : serverAddresses) {
-            if (checkConnection(serverAddress)) {
+            if (checkConnection2(serverAddress, inputData)) {
                 // If one connection is successful, return true
                 System.out.println("connected to " + serverAddress);
-                return true;
-            }else {
-                System.out.println("false");
+                return serverAddress;
+            } else {
+                System.out.println("node server is down, look for another :v ");
             }
         }
-        return false;
+        return null;
     }
 
     public boolean checkConnection(String serverAddress) {
@@ -46,20 +46,11 @@ public class User {
         return check;
     }
 
-    public void sendingData(String nameFile, String data) {
-        jsonObject = new JSONObject();
-        jsonObject.put("date", getDate());
-        jsonObject.put("data", data);
-        try {
-            jsonObject.put("private-key", getPrivateKeyStringFromJSONFile(nameFile));
-            jsonObject.put("public-key", getPublicKeyStringFromJSONFile(nameFile));
-        } catch (Exception e) {
-            System.out.println(e);
-        }
-        inputData = jsonObject.toString();
+    public boolean checkConnection2(String serverAddress, String inputData) {
+        System.out.println("please wait...");
         try (Socket socket = new Socket()) {
             //5000 milliseconds timeout for connection
-            socket.connect(new InetSocketAddress(serverAddress1, serverPort), 5000);
+            socket.connect(new InetSocketAddress(serverAddress, serverPort), 5000);
             // 5000 milliseconds timeout for reading from socket
             socket.setSoTimeout(5000);
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -72,17 +63,36 @@ public class User {
             try {
                 String response = in.readLine();
                 if (response != null) {
+                    check = true;
                     System.out.println("Response : " + response);
                 } else {
+                    check = false;
                     System.out.println("No response from server within 2 seconds.");
                 }
             } catch (SocketTimeoutException e) {
+                check = false;
                 System.out.println("No response from server within 5 seconds.");
                 System.out.println("yours-key not valid or node is not running");
             }
         } catch (IOException e) {
-            System.out.println("Error: " + e.getMessage());
+            check = false;
+            System.out.println("Error: " + e.getMessage() + ", node : " + serverAddress);
         }
+        return check;
+    }
+
+    public String sendingData(String nameFile, String data) {
+        jsonObject = new JSONObject();
+        jsonObject.put("date", getDate());
+        jsonObject.put("data", data);
+        try {
+            jsonObject.put("private-key", getPrivateKeyStringFromJSONFile(nameFile));
+            jsonObject.put("public-key", getPublicKeyStringFromJSONFile(nameFile));
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        inputData = jsonObject.toString();
+        return checkNode(serverAddress, inputData);
     }
 
 

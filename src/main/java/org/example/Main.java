@@ -51,7 +51,7 @@ public class Main {
                                 keyPairGenerator.setKey();
                                 break;
                             case 2:
-                                user.checkNode(user.serverAddress);
+//                                user.checkNode(user.serverAddress);
                                 break;
                             case 0:
                                 exit = true;
