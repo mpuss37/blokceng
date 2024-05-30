@@ -25,15 +25,14 @@ public class User {
     public void createDigitalSign(String nameFileKey, String data) {
         try {
             String publicKey = getPublicKeyStringFromJSONFile(nameFileKey);
-            String hashPublicKey = block.toHexString(block.getSHA256(publicKey));
             String privateKey = getPrivateKeyStringFromJSONFile(nameFileKey);
-            String signData = block.signData(block.stringToPrivateKey(privateKey), "iwak");
+            String signData = block.signData(block.stringToPrivateKey(privateKey), data);
             JSONObject jsonObject = new JSONObject();
-            jsonObject.put("public-key", hashPublicKey);
-            jsonObject.put("data", data);
+            jsonObject.put("public-key", publicKey);
             jsonObject.put("date", getDate());
             jsonObject.put("sign-data", signData);
             inputData = jsonObject.toString();
+
 //            System.out.print("input your name : ");
 //            String nameFileDigitalSign = main.scanner.nextLine();
 //            String fullName = nameFileDigitalSign + "herdi-sign.her";
@@ -53,7 +52,7 @@ public class User {
         jsonObject.put("date", getDate());
         jsonObject.put("data", data);
         try {
-            jsonObject.put("private-key", getPrivateKeyStringFromJSONFile(nameFile));
+            jsonObject.put("sign-data", getSignDataFromJsonFile(nameFile));
             jsonObject.put("public-key", getPublicKeyStringFromJSONFile(nameFile));
         } catch (Exception e) {
             System.out.println(e);

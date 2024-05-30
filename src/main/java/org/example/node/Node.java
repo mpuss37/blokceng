@@ -73,13 +73,13 @@ public class Node {
 
                     //string to key
                     String hashPublicKey = block.toHexString(block.getSHA256(publicKey));
-                    String dataFull = date + data + hashPublicKey;
+                    String dataFull = date + data + hashPublicKey + signData;
                     String dataHash = block.toHexString(block.getSHA256(dataFull));
 
                     //set value json for making text json structure
                     main.jsonObject = new JSONObject();
                     main.jsonObject.put("date", date);
-                    main.jsonObject.put("public-key", hashPublicKey);
+                    main.jsonObject.put("public-key", publicKey);
                     main.jsonObject.put("data", data);
                     main.jsonObject.put("sign-data", signData);
                     main.jsonObject.put("hash-data", dataHash);

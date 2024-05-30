@@ -122,8 +122,7 @@ public class Main {
             nameFile = String.valueOf(args[1]);
             data = String.valueOf(args[2]);
             String ipAddr = user.sendingData(nameFile, data);
-            System.out.println(data);
-            user.createConfigFile(ipAddr);
+//            user.createConfigFile(ipAddr);
             //sending data to node
         } else if (args.length == 1 && (args[0].equals("-h") || args[0].equals("--help"))) {
             System.out.println("blokceng (version 1.0, revision 1)");
