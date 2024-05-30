@@ -4,6 +4,7 @@ import org.example.Main;
 import org.example.data.Block;
 import org.example.user.User;
 import org.json.JSONObject;
+
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -42,10 +43,14 @@ public class Node {
             System.out.println("false your port");
             portNumber = 8080;
         }
-        inetAddress = InetAddress.getLocalHost();
         serverSocket = new ServerSocket(portNumber);
-        System.out.println("Server running at: " + inetAddress.getHostAddress() + " port : " + portNumber);
-        System.out.println("running : "+user.getDate());
+        InetAddress inetAddress = serverSocket.getInetAddress();
+        if (inetAddress.isAnyLocalAddress()) {
+            System.out.println("running on all interfaces at port : " + portNumber);
+        } else {
+            System.out.println("running on ip addr : " + inetAddress.getHostAddress() + " at port " + portNumber);
+        }
+        System.out.println("running : " + user.getDate());
 //        System.out.println("block created : "+block.checkTime(block.getTimeNow()));
         //port for server
         while (true) {
@@ -62,32 +67,36 @@ public class Node {
                     //making new object for make json structure
                     String date = main.jsonObject.getString("date");
                     data = main.jsonObject.getString("data");
-                    String privateKey = main.jsonObject.getString("private-key");
+                    String signData = main.jsonObject.getString("sign-data");
                     String publicKey = main.jsonObject.getString("public-key");
                     //get value based on key json on main.inputData
 
-                    String hashPublicKey = block.toHexString(block.getSHA256(publicKey));
-                    String hashPrivateKey = block.toHexString(block.getSHA256(privateKey));
-                    String dataFull = date+data+hashPublicKey+hashPrivateKey;
-                    String dataHash = block.toHexString(block.getSHA256(dataFull));
                     //string to key
+                    String hashPublicKey = block.toHexString(block.getSHA256(publicKey));
+                    String dataFull = date + data + hashPublicKey;
+                    String dataHash = block.toHexString(block.getSHA256(dataFull));
 
-                    main.jsonObject.put("private-key", hashPrivateKey);
-                    main.jsonObject.put("public-key", hashPublicKey);
-                    main.jsonObject.put("hash-data", dataHash);
                     //set value json for making text json structure
-                    String signedStr = block.signData(block.stringToPrivateKey(privateKey), data);
+                    main.jsonObject = new JSONObject();
+                    main.jsonObject.put("date", date);
+                    main.jsonObject.put("public-key", hashPublicKey);
+                    main.jsonObject.put("data", data);
+                    main.jsonObject.put("sign-data", signData);
+                    main.jsonObject.put("hash-data", dataHash);
+
+
+                    System.out.println(signData);
                     String nameBlock = hashPublicKey + ".her";
                     main.file = new File(nameBlock);
                     boolean checkBlockFile = new File(System.getProperty("user. dir"), nameBlock).exists();
                     if (!checkBlockFile) {
-                        if (block.verifySignature(block.stringToPublicKey(publicKey), data, signedStr)) {
+                        if (block.verifySignature(block.stringToPublicKey(publicKey), data, signData)) {
                             System.out.println("finally yours data is true :) ");
                             //from hex to string we can call this = value X
                             // and then convert to hash256 for get value string to hash256
                             FileWriter fileWriter = new FileWriter(nameBlock);
-                            Main.inputData = main.jsonObject.toString();
-                            fileWriter.write(Main.inputData);
+                            main.inputData = main.jsonObject.toString();
+                            fileWriter.write(main.inputData);
                             System.out.println("created at : " + main.file.getAbsolutePath());
                             fileWriter.close();
                             // Respond to client

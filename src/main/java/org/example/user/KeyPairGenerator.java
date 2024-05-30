@@ -13,8 +13,6 @@ import java.util.Base64;
 public class KeyPairGenerator {
     Main main = new Main();
 
-    File file;
-
     public void setKey() {
         try {
             java.security.KeyPairGenerator keyPairGenerator = java.security.KeyPairGenerator.getInstance("RSA");
@@ -35,16 +33,16 @@ public class KeyPairGenerator {
 
             main.jsonObject = new JSONObject();
             //
-            main.jsonObject.put("public-key", publicKeyStr);
             main.jsonObject.put("private-key", privateKeyStr);
+            main.jsonObject.put("public-key", publicKeyStr);
             main.inputData = main.jsonObject.toString();
             System.out.print("input your name : ");
             String nameFile = main.scanner.nextLine();
-            String fullName = nameFile+"-key.txt";
+            String fullName = nameFile+"-key.her";
             FileWriter fileWriter = new FileWriter(fullName);
             fileWriter.write(main.inputData);
-            file = new File(fullName);
-            System.out.println("created at : "+file.getAbsolutePath());
+            main.file = new File(fullName);
+            System.out.println("created at : "+main.file.getAbsolutePath());
             fileWriter.close();
         } catch (NoSuchAlgorithmException | IOException e) {
             e.printStackTrace();

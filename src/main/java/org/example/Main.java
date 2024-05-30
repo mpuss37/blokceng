@@ -29,7 +29,7 @@ public class Main {
     static public String nameFile;
     public boolean exit, valid;
 
-    private void menu(int choiceMenu){
+    private void menu(int choiceMenu) {
         exit = false;
         valid = false;
         int choice;
@@ -51,7 +51,7 @@ public class Main {
                                 keyPairGenerator.setKey();
                                 break;
                             case 2:
-//                                user.checkNode(user.serverAddress);
+                                user.getDate();
                                 break;
                             case 0:
                                 exit = true;
@@ -107,25 +107,33 @@ public class Main {
         System.out.println("Thanks all");
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException {
         Main main = new Main();
         if (args.length >= 1 && (args[0].equals("-u") || args[0].equals("--user"))) {
             main.menu(1);
+        } else if (args.length >= 1 && (args[0].equals("-n") || args[0].equals("--node"))) {
+            main.menu(0);
+        } else if (args.length >= 3 && (args[0].equals("-d") || args[0].equals("--digital-sign"))) {
+            nameFile = String.valueOf(args[1]);
+            data = String.valueOf(args[2]);
+            user.createDigitalSign(nameFile, data);
+            //create digital-sign
         } else if (args.length >= 3 && (args[0].equals("-s") || args[0].equals("--send"))) {
             nameFile = String.valueOf(args[1]);
             data = String.valueOf(args[2]);
-            user.sendingData(nameFile, data);
+            String ipAddr = user.sendingData(nameFile, data);
+            System.out.println(data);
+            user.createConfigFile(ipAddr);
             //sending data to node
-        } else if (args.length >= 1 && (args[0].equals("-n") || args[0].equals("--node"))) {
-            main.menu(0);
         } else if (args.length == 1 && (args[0].equals("-h") || args[0].equals("--help"))) {
             System.out.println("blokceng (version 1.0, revision 1)");
             System.out.println("""
                     Usage:
                      blokceng [OPTIONS]...[VALUES]\t
                       -u, --user    become a user.
-                      -s, --send [key] ['data']     send data to node.
                       -n, --node     become a node.
+                      -d, --digital-sign [key] ['data']     create digital-sign.
+                      -s, --send ['digital-sign']     send data to node.
                     """);
         } else {
             System.out.println("blokceng: missing operand\n" + "Try 'blokceng -h or --help' for more information.");
