@@ -170,8 +170,7 @@ public class User {
         System.out.println("please wait...");
         try (Socket socket = new Socket()) {
             //5000 milliseconds timeout for connection
-//            socket.connect(new InetSocketAddress(serverAddress, serverPort), 5000);
-            socket.connect(new InetSocketAddress(serverAddress, serverPort));
+            socket.connect(new InetSocketAddress(serverAddress, serverPort), 5000);
             // 5000 milliseconds timeout for reading from socket
             socket.setSoTimeout(5000);
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
