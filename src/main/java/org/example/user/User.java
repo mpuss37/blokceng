@@ -15,7 +15,7 @@ public class User {
     JSONObject jsonObject;
     Block block = new Block();
 
-    public String[] serverAddress = {"192.168.1.121", "192.168.1.122","192.168.1.129", "192.168.1.123", "192.168.1.100", "192.168.1.124", "192.168.100.135"};
+    public String[] serverAddress = {"192.168.43.242", "192.168.1.121", "192.168.1.122", "192.168.1.129", "192.168.1.123", "192.168.1.100", "192.168.1.124", "192.168.100.135"};
     String inputData;
     boolean check;
     int serverPort = 8080;
