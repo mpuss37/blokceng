@@ -38,7 +38,7 @@ public class Main {
                 //if exit is true, not looping
                 System.out.println("=== MENU USER ===");
                 System.out.println("1. get-key");
-                System.out.println("2. check-connection-node");
+                System.out.println("2. count-data");
                 System.out.println("0. exit");
                 while (!valid) {
                     //if valid is true, not looping
@@ -51,7 +51,7 @@ public class Main {
                                 keyPairGenerator.setKey();
                                 break;
                             case 2:
-                                user.getDate();
+                                user.getData();
                                 break;
                             case 0:
                                 exit = true;
@@ -85,6 +85,7 @@ public class Main {
                                 node.runningNode();
                                 break;
                             case 2:
+                                node.checkActiveNodes(user.serverAddress, 8080);
                                 break;
                             case 0:
                                 exit = true;

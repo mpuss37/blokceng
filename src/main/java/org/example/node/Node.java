@@ -9,6 +9,9 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.*;
 import java.text.ParseException;
 import java.util.Base64;
@@ -23,8 +26,8 @@ public class Node {
 
     ServerSocket serverSocket = null;
     Socket clientSocket = null;
-    InetAddress inetAddress;
 
+    public String[] serverAddress = {"192.168.1.121", "192.168.1.122","192.168.1.129", "192.168.1.123", "192.168.1.100", "192.168.1.124", "192.168.100.135"};
     private String data;
     int portNumber = 8080;
 
@@ -33,6 +36,18 @@ public class Node {
         Runnable blockTask = () -> {
         };
         scheduler.scheduleAtFixedRate(blockTask, 1, 1, TimeUnit.MINUTES);
+    }
+
+    public int countHerFiles() {
+        try {
+            Path path = Paths.get(System.getProperty("user.dir"));
+            return (int) Files.list(path)
+                    .filter(p -> p.toString().endsWith(".her"))
+                    .count();
+        } catch (IOException e) {
+            System.out.println("Error counting .her files: " + e.getMessage());
+            return 0;
+        }
     }
 
     public void runningNode() throws IOException, ParseException {
@@ -51,8 +66,6 @@ public class Node {
             System.out.println("running on ip addr : " + inetAddress.getHostAddress() + " at port " + portNumber);
         }
         System.out.println("running : " + user.getDate());
-//        System.out.println("block created : "+block.checkTime(block.getTimeNow()));
-        //port for server
         while (true) {
             try {
                 clientSocket = serverSocket.accept();
@@ -62,7 +75,11 @@ public class Node {
 
                 // Read data from client
                 Main.inputData = in.readLine();
-                if (Main.inputData != null) {
+                if ("-c".equals(Main.inputData)) {
+                    // count data
+                    int herFileCount = countHerFiles();
+                    out.println("total data : " + herFileCount);
+                } else if (Main.inputData != null) {
                     main.jsonObject = new JSONObject(Main.inputData);
                     //making new object for make json structure
                     String date = main.jsonObject.getString("date");
@@ -85,7 +102,6 @@ public class Node {
                     main.jsonObject.put("hash-data", dataHash);
 
 
-                    System.out.println(signData);
                     String nameBlock = hashPublicKey + ".her";
                     main.file = new File(nameBlock);
                     boolean checkBlockFile = new File(System.getProperty("user. dir"), nameBlock).exists();
@@ -119,22 +135,21 @@ public class Node {
         }
     }
 
-    public boolean validationData(String publicKeyy, String privateKeyy) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        // Sign data
-        data = publicKeyy + privateKeyy;
-        Signature signature = Signature.getInstance("SHA256withRSA");
-        signature.initSign(main.privateKey);
-        signature.update(data.getBytes());
-        byte[] signedData = signature.sign();
-        String signedDataStr = Base64.getEncoder().encodeToString(signedData);
-        System.out.println("Signed Data: " + signedDataStr);
+    public boolean isNodeRunning(String ip, int port) {
+        try (Socket socket = new Socket(ip, port)) {
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
 
-        // Verify signature
-        Signature verifySignature = Signature.getInstance("SHA256withRSA");
-        verifySignature.initVerify(main.publicKey);
-        verifySignature.update(data.getBytes());
-        boolean isValid = verifySignature.verify(signedData);
-        System.out.println("Signature verification result: " + isValid);
-        return isValid;
+    public void checkActiveNodes(String[] serverAddresses, int port) {
+        for (String ip : serverAddresses) {
+            if (isNodeRunning(ip, port)) {
+                System.out.println("Node " + ip + " is active.");
+            } else {
+                System.out.println("Node " + ip + " is not active.");
+            }
+        }
     }
 }

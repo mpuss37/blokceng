@@ -15,9 +15,7 @@ public class User {
     JSONObject jsonObject;
     Block block = new Block();
 
-    String serverAddress1 = "192.168.1.124", serverAddress2 = "192.168.100.135";
-    //    public String[] serverAddress = {"192.168.1.121", "192.168.1.122", "192.168.1.123", "192.168.1.100", "192.168.1.124", "192.168.100.135"};
-    public String[] serverAddress = {"192.168.1.129"};
+    public String[] serverAddress = {"192.168.1.121", "192.168.1.122","192.168.1.129", "192.168.1.123", "192.168.1.100", "192.168.1.124", "192.168.100.135"};
     String inputData;
     boolean check;
     int serverPort = 8080;
@@ -59,6 +57,10 @@ public class User {
         }
         inputData = jsonObject.toString();
         return checkNode(serverAddress, inputData);
+    }
+
+    public String getData() {
+        return checkNode(serverAddress, "-c");
     }
 
     public void createConfigFile(String ipAddr) throws IOException {
