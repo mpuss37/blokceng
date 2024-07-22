@@ -1,16 +1,15 @@
 package org.example;
 
 import org.example.data.Block;
+import org.example.node.ApiServer;
 import org.example.node.Node;
 import org.example.user.KeyPairGenerator;
 import org.example.user.User;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.text.ParseException;
 import java.util.Scanner;
 
 public class Main {
@@ -19,6 +18,7 @@ public class Main {
     static KeyPairGenerator keyPairGenerator = new KeyPairGenerator();
     static User user = new User();
     static Node node = new Node();
+    static ApiServer apiServer = new ApiServer();
     Block block = new Block();
 
     public static String data, publicKeyUser, privateKeyUser, date, inputData;
@@ -51,7 +51,9 @@ public class Main {
                                 keyPairGenerator.setKey();
                                 break;
                             case 2:
-                                user.getData();
+                                String hash = "89b5f71a4f9b1d15d15020864b1d8f9ee10c40d81a2ffe3772994bfe1aee461a";
+                                String data = user.getHashData(hash);
+                                System.out.println("Fetched data: " + data);
                                 break;
                             case 0:
                                 exit = true;
@@ -85,7 +87,6 @@ public class Main {
                                 node.runningNode();
                                 break;
                             case 2:
-                                node.checkActiveNodes(user.serverAddress, 8080);
                                 break;
                             case 0:
                                 exit = true;
@@ -96,8 +97,6 @@ public class Main {
                         }
                     } catch (NumberFormatException e) {
                         System.out.println("the input entered is not a number, try again.");
-                    } catch (IOException | ParseException e) {
-                        throw new RuntimeException(e);
                     }
                 }
                 valid = false;
@@ -108,8 +107,9 @@ public class Main {
         System.out.println("Thanks all");
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         Main main = new Main();
+
         if (args.length >= 1 && (args[0].equals("-u") || args[0].equals("--user"))) {
             main.menu(1);
         } else if (args.length >= 1 && (args[0].equals("-n") || args[0].equals("--node"))) {
@@ -123,8 +123,9 @@ public class Main {
             nameFile = String.valueOf(args[1]);
             data = String.valueOf(args[2]);
             String ipAddr = user.sendingData(nameFile, data);
-//            user.createConfigFile(ipAddr);
             //sending data to node
+        } else if (args.length == 1 && (args[0].equals("-a") || args[0].equals("--api"))) {
+            apiServer.RunEndpointApi();
         } else if (args.length == 1 && (args[0].equals("-h") || args[0].equals("--help"))) {
             System.out.println("blokceng (version 1.0, revision 1)");
             System.out.println("""
@@ -132,8 +133,9 @@ public class Main {
                      blokceng [OPTIONS]...[VALUES]\t
                       -u, --user    become a user.
                       -n, --node     become a node.
-                      -d, --digital-sign [key] ['data']     create digital-sign.
-                      -s, --send ['digital-sign']     send data to node.
+                      -d, --digital-sign [key] [data]     create digital-sign.
+                      -s, --send [digital-sign]     send data to node.
+                      -a, --api     start the API server.
                     """);
         } else {
             System.out.println("blokceng: missing operand\n" + "Try 'blokceng -h or --help' for more information.");

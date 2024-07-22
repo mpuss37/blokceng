@@ -12,7 +12,6 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.ParseException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -21,11 +20,13 @@ public class Node {
     Main main = new Main();
     Block block = new Block();
     User user = new User();
+    ApiServer apiServer = new ApiServer();
 
     ServerSocket serverSocket = null;
     Socket clientSocket = null;
+    InetAddress inetAddress = null;
 
-    public String[] serverAddress = {"192.168.1.121", "192.168.1.122","192.168.1.129", "192.168.1.123", "192.168.1.100", "192.168.1.124", "192.168.100.135"};
+    public String[] serverAddress = {"180.247.17.249", "36.81.114.212", "192.168.43.135"};
     private String data;
     int portNumber = 8080;
 
@@ -48,16 +49,21 @@ public class Node {
         }
     }
 
-    public void runningNode() throws IOException, ParseException {
+    public void runningNode() {
         System.out.println("recommended : 8080 (default) / 443 (root)");
-        System.out.print("input your port : ");
-        portNumber = main.scanner.nextInt();
-        if (portNumber != 443 && portNumber != 8080) {
-            System.out.println("false your port");
-            portNumber = 8080;
+//        System.out.print("input your port : ");
+//        portNumber = main.scanner.nextInt();
+//        if (portNumber != 443 && portNumber != 8080) {
+//            System.out.println("false your port");
+//            portNumber = 80;
+//        }
+        try {
+            serverSocket = new ServerSocket(portNumber);
+            inetAddress = serverSocket.getInetAddress();
+        } catch (IOException e) {
+            System.out.println("error running node, check your network");
+//            throw new RuntimeException(e);
         }
-        serverSocket = new ServerSocket(portNumber);
-        InetAddress inetAddress = serverSocket.getInetAddress();
         if (inetAddress.isAnyLocalAddress()) {
             System.out.println("running on all interfaces at port : " + portNumber);
         } else {
@@ -148,6 +154,7 @@ public class Node {
             } else {
                 System.out.println("Node " + ip + " is not active.");
             }
+
         }
     }
 }

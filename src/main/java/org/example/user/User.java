@@ -5,20 +5,22 @@ import org.example.data.Block;
 import org.json.JSONObject;
 
 import java.io.*;
-import java.net.*;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class User {
-    Main main = new Main();
-    JSONObject jsonObject;
-    Block block = new Block();
+    private final Main main = new Main();
+    private final Block block = new Block();
+    private final int serverPort = 8080;
+    private JSONObject jsonObject;
+    private String inputData;
 
-    public String[] serverAddress = {"192.168.43.135","192.168.43.242", "192.168.1.121", "192.168.1.122", "192.168.1.129", "192.168.1.123", "192.168.1.100", "192.168.1.124", "192.168.100.135"};
-    String inputData;
-    boolean check;
-    int serverPort = 8080;
+    public String[] serverAddress = {"192.168.18.64", "180.247.17.249", "36.81.114.212", "192.168.43.135"};
 
     public void createDigitalSign(String nameFileKey, String data) {
         try {
@@ -31,15 +33,21 @@ public class User {
             jsonObject.put("sign-data", signData);
             inputData = jsonObject.toString();
 
-//            System.out.print("input your name : ");
-//            String nameFileDigitalSign = main.scanner.nextLine();
-//            String fullName = nameFileDigitalSign + "herdi-sign.her";
-            String fullName = "herdi-sign.her";
-            FileWriter fileWriter = new FileWriter(fullName);
-            fileWriter.write(inputData);
-            File file = new File(fullName);
-            System.out.println("created at : " + file.getAbsolutePath());
-            fileWriter.close();
+            String[] parts = nameFileKey.split("-");
+            String leftOfDash = null;
+            String fullName = null;
+            if (parts.length > 1) {
+                // take left word
+                leftOfDash = parts[0];
+                fullName = leftOfDash + "-sign.her";
+                try (FileWriter fileWriter = new FileWriter(fullName)) {
+                    fileWriter.write(inputData);
+                    File file = new File(fullName);
+                    System.out.println("created at : " + file.getAbsolutePath());
+                }
+            } else {
+                System.out.println("wrong file");
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -70,136 +78,118 @@ public class User {
         if (inputData != null) {
             String configFile = "blokceng.conf";
             main.file = new File(configFile);
-            boolean checkConfigFile = new File(System.getProperty("user. dir"), configFile).exists();
-            if (!checkConfigFile) {
-                FileWriter fileWriter = new FileWriter(configFile);
-                inputData = main.jsonObject.toString();
-                fileWriter.write(inputData);
-                System.out.println("created at : " + main.file.getAbsolutePath());
-                fileWriter.close();
+            if (!main.file.exists()) {
+                try (FileWriter fileWriter = new FileWriter(configFile)) {
+                    inputData = main.jsonObject.toString();
+                    fileWriter.write(inputData);
+                    System.out.println("created at : " + main.file.getAbsolutePath());
+                }
             }
         } else {
             System.out.println("yours data is null");
         }
     }
 
-    public void getDataConfigFile() {
-
-    }
-
-
     public String getDate() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
         TimeZone timeZone = TimeZone.getDefault();
         LocalDateTime now = LocalDateTime.now();
-        String date = (dtf.format(now) + " " + timeZone.getDisplayName());
-        return date;
+        return dtf.format(now) + " " + timeZone.getDisplayName(false, TimeZone.SHORT);
     }
 
     public static String getSignDataFromJsonFile(String fileName) throws Exception {
-        // read text file
-        BufferedReader reader = new BufferedReader(new FileReader(fileName));
-        StringBuilder stringBuilder = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            stringBuilder.append(line);
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            StringBuilder stringBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line);
+            }
+            JSONObject jsonObject = new JSONObject(stringBuilder.toString());
+            return jsonObject.getString("sign-data");
         }
-        reader.close();
-
-        // change data to jsonObject
-        JSONObject jsonObject = new JSONObject(stringBuilder.toString());
-
-        // take publicKey data on jsonObject
-        return jsonObject.getString("sign-data");
     }
 
     public static String getPublicKeyStringFromJSONFile(String fileName) throws Exception {
-        // read text file
-        BufferedReader reader = new BufferedReader(new FileReader(fileName));
-        StringBuilder stringBuilder = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            stringBuilder.append(line);
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            StringBuilder stringBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line);
+            }
+            JSONObject jsonObject = new JSONObject(stringBuilder.toString());
+            return jsonObject.getString("public-key");
         }
-        reader.close();
-
-        // change data to jsonObject
-        JSONObject jsonObject = new JSONObject(stringBuilder.toString());
-
-        // take publicKey data on jsonObject
-        return jsonObject.getString("public-key");
     }
 
     public static String getPrivateKeyStringFromJSONFile(String fileName) throws Exception {
-        // Baca isi file teks
-        BufferedReader reader = new BufferedReader(new FileReader(fileName));
-        StringBuilder stringBuilder = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            stringBuilder.append(line);
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            StringBuilder stringBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line);
+            }
+            JSONObject jsonObject = new JSONObject(stringBuilder.toString());
+            return jsonObject.getString("private-key");
         }
-        reader.close();
-
-        // change json to jsonObject
-        JSONObject jsonObject = new JSONObject(stringBuilder.toString());
-
-        // take privateKey data on jsonObject
-        return jsonObject.getString("private-key");
     }
+
+
+    public String getHashData(String hash) {
+        StringBuilder result = new StringBuilder();
+        try {
+            String urlString = "http://192.168.18.64:8000/" + hash + ".her";
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+
+            BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String line;
+            while ((line = rd.readLine()) != null) {
+                result.append(line);
+            }
+            rd.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error, check your hash addr :) ";
+//            return "Error fetching data: " + e.getMessage();
+        }
+        return result.toString();
+    }
+
 
     public String checkNode(String[] serverAddresses, String inputData) {
         List<String> serverList = Arrays.asList(serverAddresses);
-
-        // Shuffle the list to randomize the order
         Collections.shuffle(serverList, new Random());
-
-        for (String serverAddress : serverAddresses) {
+        for (String serverAddress : serverList) {
             if (checkConnection(serverAddress, inputData)) {
-                // If one connection is successful, return true
                 System.out.println("connected to " + serverAddress);
                 return serverAddress;
             } else {
                 System.out.println("node server is down, look for another :v \n");
             }
         }
-        String serverAddress = String.valueOf(serverAddresses);
-        return serverAddress;
+        return null;
     }
 
     public boolean checkConnection(String serverAddress, String inputData) {
         System.out.println("please wait...");
         try (Socket socket = new Socket()) {
-            //5000 milliseconds timeout for connection
             socket.connect(new InetSocketAddress(serverAddress, serverPort), 5000);
-            // 5000 milliseconds timeout for reading from socket
             socket.setSoTimeout(5000);
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-            // sending data
-            out.println(inputData);
-
-            // response server
-            try {
+            try (PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                out.println(inputData);
                 String response = in.readLine();
                 if (response != null) {
-                    check = true;
                     System.out.println("Response : " + response);
-                    return check;
+                    return true;
                 } else {
-                    check = false;
-                    System.out.println("No response from server within 2 seconds.");
+                    System.out.println("No response from server within 5 seconds.");
                 }
-            } catch (SocketTimeoutException e) {
-                check = false;
-                System.out.println("No response from server within 5 seconds.");
-                System.out.println("yours-key not valid or node is not running");
             }
         } catch (IOException e) {
-            check = false;
             System.out.println("Error: " + e.getMessage() + ", node : " + serverAddress);
-            return check;
         }
-        return new Random().nextBoolean();
+        return false;
     }
 }

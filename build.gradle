@@ -13,6 +13,8 @@ dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     implementation group: 'org.json', name: 'json', version: '20240303'
+    implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '11.0.21'
+    testImplementation group: 'org.slf4j', name: 'slf4j-nop', version: '2.0.13'
 }
 
 jar {
