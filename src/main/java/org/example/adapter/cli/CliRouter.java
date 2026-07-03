@@ -2,6 +2,7 @@ package org.example.adapter.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import org.example.adapter.api.ApiServer;
 import org.example.application.VotingService;
 import org.example.application.WalletService;
 import org.example.application.NodeService;
@@ -93,7 +94,7 @@ public class CliRouter {
 
     private void handleVote(String[] args) {
         if (args.length == 0) {
-            System.out.println("Usage: vote cast --wallet <name> --election <id> --candidate <id> [--pass <passphrase>]");
+            System.out.println("Usage: vote cast --wallet <name> --election <id> --candidate <id> [--pass <passphrase>] [--node <url>]");
             return;
         }
         if ("cast".equals(args[0])) {
@@ -101,58 +102,89 @@ public class CliRouter {
             String electionId = getArg(args, "--election", "default");
             String candidateId = getArg(args, "--candidate", "0");
             String passphrase = getArg(args, "--pass", "");
+            String nodeUrl = getArg(args, "--node", "http://localhost:8000");
 
             try {
-                Wallet wallet = walletService.loadWallet(walletName);
-                byte[] privateKey = walletService.loadPrivateKey(wallet, passphrase);
-                List<byte[]> ringKeys = List.of(); // pon ytail: empty ring for now
-                Transaction tx = votingService.castVote(wallet, privateKey, electionId, candidateId, ringKeys);
-                System.out.println("Vote cast successfully!");
-                System.out.println("Transaction ID: " + tx.transactionId());
-                System.out.println("Nullifier: " + tx.nullifier());
+                if (nodeUrl != null) {
+                    sendVoteRemote(nodeUrl, walletName, passphrase, electionId, candidateId);
+                }
             } catch (Exception e) {
                 System.out.println("Error casting vote: " + e.getMessage());
             }
         }
     }
 
+    private void sendVoteRemote(String nodeUrl, String walletName, String passphrase, String electionId, String candidateId) throws Exception {
+        var voteData = java.util.Map.of(
+                "wallet", walletName,
+                "pass", passphrase,
+                "election", electionId,
+                "candidate", candidateId
+        );
+        String jsonBody = mapper.writeValueAsString(voteData);
+        java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+        java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(nodeUrl + "/vote"))
+                .header("Content-Type", "application/json")
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
+        java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+
+        var result = mapper.readValue(response.body(), java.util.Map.class);
+        if (response.statusCode() == 201) {
+            System.out.println("Vote cast successfully! (via " + nodeUrl + ")");
+            System.out.println("Transaction ID: " + result.get("transactionId"));
+            System.out.println("Nullifier: " + result.get("nullifier"));
+        } else {
+            System.out.println("Error: " + result.getOrDefault("error", "Unknown error"));
+        }
+    }
+
     private void handleNode(String[] args) {
         if (args.length == 0) {
-            System.out.println("Usage: node start [--port <port>] [--id <nodeId>]");
+            System.out.println("Usage: node start [--port <port>] [--api-port <port>] [--id <nodeId>]");
             return;
         }
         if ("start".equals(args[0])) {
             int port = 8080;
+            int apiPort = 8000;
             String nodeId = p2pNetwork instanceof org.example.infrastructure.network.TcpP2pNetwork tcp
                     ? tcp.getNodeId() : defaultNodeId;
 
             for (int i = 1; i < args.length - 1; i++) {
                 if ("--port".equals(args[i])) {
                     port = Integer.parseInt(args[i + 1]);
+                } else if ("--api-port".equals(args[i])) {
+                    apiPort = Integer.parseInt(args[i + 1]);
                 } else if ("--id".equals(args[i])) {
                     nodeId = args[i + 1];
                 }
             }
 
-            // load or generate validator keypair
             byte[] validatorPrivateKey = loadOrGenerateValidatorKey();
+            final int finalApiPort = apiPort;
 
-            System.out.println("Starting node: " + nodeId + " on port " + port);
+            // start API server in daemon thread (same JVM = same storage instance)
+            ApiServer apiServer = new ApiServer(nodeService.getStorage(), votingService, walletService);
+            Thread apiThread = new Thread(() -> {
+                try { apiServer.start(finalApiPort); } catch (Exception e) { System.err.println("API error: " + e.getMessage()); }
+            }, "api-server");
+            apiThread.setDaemon(true);
+            apiThread.start();
+
+            System.out.println("Node: " + nodeId);
+            System.out.println("P2P: port " + port + " | API: http://0.0.0.0:" + apiPort);
             p2pNetwork.start(port);
             nodeService.start(validatorPrivateKey, List.of());
-            System.out.println("Node running. Block production every 10s. Press Ctrl+C to stop.");
+            System.out.println("Node running. Press Ctrl+C to stop.");
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                System.out.println("Shutting down node...");
+                System.out.println("Shutting down...");
                 p2pNetwork.stop();
                 nodeService.stop();
             }));
 
-            try {
-                Thread.currentThread().join();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            try { Thread.currentThread().join(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
     }
 
@@ -250,7 +282,7 @@ public class CliRouter {
                 Commands:
                   wallet create --name <name> [--pass <passphrase>]
                   wallet info --name <name>
-                  vote cast --wallet <name> --election <id> --candidate <id> [--pass <passphrase>]
+                  vote cast --wallet <name> --election <id> --candidate <id> [--pass <passphrase>] [--node <url>]
                   tally --election <id>
                   node start [--port <port>]
                   chain info

@@ -55,7 +55,7 @@ public class Main {
             }
             final int apiPort = port;
             try {
-                new ApiServer(storage).start(apiPort);
+                new ApiServer(storage, votingService, walletService).start(apiPort);
             } catch (Exception e) {
                 System.err.println("API server error: " + e.getMessage());
             }

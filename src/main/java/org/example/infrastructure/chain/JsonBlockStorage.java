@@ -120,6 +120,12 @@ public class JsonBlockStorage implements BlockStorage {
     }
 
     @Override
+    public void reloadBlocks() {
+        blocks.clear();
+        loadBlocks();
+    }
+
+    @Override
     public void createSnapshot(String path) {
         try {
             Map<String, Object> snapshot = new HashMap<>();

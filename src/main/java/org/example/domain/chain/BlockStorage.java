@@ -33,6 +33,8 @@ public interface BlockStorage {
 
     void reloadNullifiers();
 
+    void reloadBlocks();
+
     void createSnapshot(String path);
 
     void restoreFromSnapshot(String path);
