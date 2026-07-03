@@ -8,10 +8,12 @@ import org.example.application.WalletService;
 import org.example.domain.chain.BlockStorage;
 import org.example.domain.consensus.ConsensusEngine;
 import org.example.domain.crypto.*;
+import org.example.domain.network.P2pNetwork;
 import org.example.infrastructure.chain.JsonBlockStorage;
 import org.example.infrastructure.config.AppConfig;
 import org.example.infrastructure.consensus.ProofOfAuthority;
 import org.example.infrastructure.crypto.*;
+import org.example.infrastructure.network.TcpP2pNetwork;
 
 import java.util.Arrays;
 
@@ -28,6 +30,7 @@ public class Main {
         LinkableRingSignatureProvider lrs = new LinkableRingSignatureImpl(crypto);
         BlockStorage storage = new JsonBlockStorage();
         ConsensusEngine consensus = new ProofOfAuthority(crypto, vrf, merkleTree);
+        P2pNetwork p2pNetwork = new TcpP2pNetwork(config.nodeId(), config.bootstrapPeers());
 
         // --- services ---
         WalletService walletService = new WalletService(crypto);
@@ -35,7 +38,7 @@ public class Main {
         NodeService nodeService = new NodeService(crypto, consensus, storage);
 
         // --- CLI routing ---
-        CliRouter cli = new CliRouter(walletService, votingService, nodeService);
+        CliRouter cli = new CliRouter(walletService, votingService, nodeService, p2pNetwork, config.nodeId());
 
         if (args.length == 0) {
             cli.printHelp();
@@ -50,8 +53,9 @@ public class Main {
                     port = Integer.parseInt(args[i + 1]);
                 }
             }
+            final int apiPort = port;
             try {
-                new ApiServer(storage).start(port);
+                new ApiServer(storage).start(apiPort);
             } catch (Exception e) {
                 System.err.println("API server error: " + e.getMessage());
             }

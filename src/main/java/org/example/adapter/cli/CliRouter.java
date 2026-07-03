@@ -5,6 +5,7 @@ import org.example.application.WalletService;
 import org.example.application.NodeService;
 import org.example.domain.model.Wallet;
 import org.example.domain.model.Transaction;
+import org.example.domain.network.P2pNetwork;
 
 import java.util.Arrays;
 import java.util.List;
@@ -14,11 +15,16 @@ public class CliRouter {
     private final WalletService walletService;
     private final VotingService votingService;
     private final NodeService nodeService;
+    private final P2pNetwork p2pNetwork;
+    private final String defaultNodeId;
 
-    public CliRouter(WalletService walletService, VotingService votingService, NodeService nodeService) {
+    public CliRouter(WalletService walletService, VotingService votingService, NodeService nodeService,
+                     P2pNetwork p2pNetwork, String defaultNodeId) {
         this.walletService = walletService;
         this.votingService = votingService;
         this.nodeService = nodeService;
+        this.p2pNetwork = p2pNetwork;
+        this.defaultNodeId = defaultNodeId;
     }
 
     public void route(String[] args) {
@@ -93,12 +99,39 @@ public class CliRouter {
 
     private void handleNode(String[] args) {
         if (args.length == 0) {
-            System.out.println("Usage: node start [--port <port>]");
+            System.out.println("Usage: node start [--port <port>] [--id <nodeId>] [--bootstrap <host:port,host:port>]");
             return;
         }
         if ("start".equals(args[0])) {
-            System.out.println("Node starting...");
-            // nodeService.start() would be called with proper config
+            int port = 8080;
+            String nodeId = p2pNetwork instanceof org.example.infrastructure.network.TcpP2pNetwork tcp
+                    ? tcp.getNodeId() : defaultNodeId;
+
+            for (int i = 1; i < args.length - 1; i++) {
+                if ("--port".equals(args[i])) {
+                    port = Integer.parseInt(args[i + 1]);
+                } else if ("--id".equals(args[i])) {
+                    nodeId = args[i + 1];
+                }
+            }
+
+            System.out.println("Starting node: " + nodeId + " on port " + port);
+            System.out.println("To change nodeId, edit blokceng.json");
+            p2pNetwork.start(port);
+            nodeService.start(null, List.of());
+            System.out.println("Node running. Press Ctrl+C to stop.");
+
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                System.out.println("Shutting down node...");
+                p2pNetwork.stop();
+                nodeService.stop();
+            }));
+
+            try {
+                Thread.currentThread().join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
