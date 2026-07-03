@@ -1,6 +1,7 @@
 package org.example.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.example.domain.crypto.CryptoProvider;
 import org.example.domain.model.KeyPair;
 import org.example.domain.model.Wallet;
@@ -14,7 +15,7 @@ import java.security.SecureRandom;
 public class WalletService {
 
     private final CryptoProvider crypto;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper().registerModule(new ParameterNamesModule());
 
     public WalletService(CryptoProvider crypto) {
         this.crypto = crypto;

@@ -7,9 +7,7 @@ import org.example.domain.model.*;
 import org.example.infrastructure.crypto.HashUtil;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class VotingService {
 
@@ -98,18 +96,23 @@ public class VotingService {
 
     public VoteTally tallyVotes(String electionId) {
         int[] counts = new int[100];
+        Set<String> counted = new HashSet<>();
 
         // count from committed blocks
         List<Block> allBlocks = storage.readAllBlocks();
         for (Block block : allBlocks) {
             for (Transaction tx : block.transactions()) {
-                countTx(tx, electionId, counts);
+                if (counted.add(tx.transactionId())) {
+                    countTx(tx, electionId, counts);
+                }
             }
         }
 
-        // also count from pending transactions
+        // also count from pending (not yet in any block)
         for (Transaction tx : storage.getPendingTransactions()) {
-            countTx(tx, electionId, counts);
+            if (counted.add(tx.transactionId())) {
+                countTx(tx, electionId, counts);
+            }
         }
 
         return new VoteTally(electionId, counts);

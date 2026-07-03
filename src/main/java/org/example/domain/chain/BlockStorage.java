@@ -31,6 +31,8 @@ public interface BlockStorage {
 
     void reloadPending();
 
+    void reloadNullifiers();
+
     void createSnapshot(String path);
 
     void restoreFromSnapshot(String path);

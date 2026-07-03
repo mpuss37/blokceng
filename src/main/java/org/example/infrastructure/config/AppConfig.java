@@ -2,6 +2,7 @@ package org.example.infrastructure.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,6 +21,7 @@ public record AppConfig(
 ) {
     private static final String CONFIG_FILE = "blokceng.json";
     private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new ParameterNamesModule())
             .enable(SerializationFeature.INDENT_OUTPUT);
 
     public static AppConfig defaults() {

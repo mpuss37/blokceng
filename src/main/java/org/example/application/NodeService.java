@@ -59,8 +59,9 @@ public class NodeService {
     }
 
     public void produceBlock(byte[] validatorPrivateKey, List<String> validatorCandidates) {
-        // reload pending from file (other processes may have added votes)
+        // reload pending + nullifiers from file (other processes may have added votes)
         storage.reloadPending();
+        storage.reloadNullifiers();
 
         List<Transaction> pending = storage.getPendingTransactions();
         if (pending.isEmpty()) {

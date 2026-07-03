@@ -1,6 +1,7 @@
 package org.example.adapter.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.example.application.VotingService;
 import org.example.application.WalletService;
 import org.example.application.NodeService;
@@ -24,7 +25,7 @@ public class CliRouter {
     private final P2pNetwork p2pNetwork;
     private final CryptoProvider crypto;
     private final String defaultNodeId;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper().registerModule(new ParameterNamesModule());
 
     public CliRouter(WalletService walletService, VotingService votingService, NodeService nodeService,
                      P2pNetwork p2pNetwork, CryptoProvider crypto, String defaultNodeId) {

@@ -3,6 +3,7 @@ package org.example.infrastructure.chain;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.example.domain.chain.BlockStorage;
 import org.example.domain.model.Block;
 import org.example.domain.model.Transaction;
@@ -21,6 +22,7 @@ public class JsonBlockStorage implements BlockStorage {
     private static final String PENDING_FILE = "data/pending-tx.json";
 
     private final ObjectMapper mapper = new ObjectMapper()
+            .registerModule(new ParameterNamesModule())
             .enable(SerializationFeature.INDENT_OUTPUT);
     private final List<Block> blocks = new CopyOnWriteArrayList<>();
     private final Map<String, Set<String>> nullifiers = new ConcurrentHashMap<>();
@@ -109,6 +111,12 @@ public class JsonBlockStorage implements BlockStorage {
     public void reloadPending() {
         pendingTransactions.clear();
         loadPending();
+    }
+
+    @Override
+    public void reloadNullifiers() {
+        nullifiers.clear();
+        loadNullifiers();
     }
 
     @Override
@@ -205,9 +213,10 @@ public class JsonBlockStorage implements BlockStorage {
         Path path = Path.of(PENDING_FILE);
         if (!Files.exists(path)) return;
         try {
-            List<Transaction> loaded = mapper.readValue(path.toFile(), new TypeReference<>() {});
+            var type = mapper.getTypeFactory().constructCollectionType(java.util.ArrayList.class, Transaction.class);
+            List<Transaction> loaded = mapper.readValue(path.toFile(), type);
             pendingTransactions.addAll(loaded);
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("Error loading pending tx: " + e.getMessage());
         }
     }
