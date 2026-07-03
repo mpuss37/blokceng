@@ -1,5 +1,6 @@
 package org.example.infrastructure.consensus;
 
+import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.example.domain.consensus.ConsensusEngine;
 import org.example.domain.crypto.CryptoProvider;
 import org.example.domain.crypto.VrfProvider;
@@ -100,9 +101,8 @@ public class ProofOfAuthority implements ConsensusEngine {
     }
 
     private byte[] derivePublicKey(byte[] privateKey) {
-        // pon ytail: in real impl, derive from private key
-        // for now, sign a known value and use that as identity
-        return crypto.sign(privateKey, "pubkey-derive".getBytes(StandardCharsets.UTF_8));
+        Ed25519PrivateKeyParameters privKey = new Ed25519PrivateKeyParameters(privateKey);
+        return privKey.generatePublicKey().getEncoded();
     }
 
     private int compareBytes(byte[] a, byte[] b) {

@@ -5,7 +5,6 @@ import org.example.application.VotingService;
 import org.example.application.WalletService;
 import org.example.application.NodeService;
 import org.example.domain.crypto.CryptoProvider;
-import org.example.domain.model.KeyPair;
 import org.example.domain.model.Wallet;
 import org.example.domain.model.Transaction;
 import org.example.domain.network.P2pNetwork;
@@ -140,7 +139,7 @@ public class CliRouter {
             System.out.println("Starting node: " + nodeId + " on port " + port);
             p2pNetwork.start(port);
             nodeService.start(validatorPrivateKey, List.of());
-            System.out.println("Node running. Block production every 30s. Press Ctrl+C to stop.");
+            System.out.println("Node running. Block production every 10s. Press Ctrl+C to stop.");
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 System.out.println("Shutting down node...");
@@ -160,19 +159,28 @@ public class CliRouter {
         Path keyPath = Path.of("data", "validator-key.json");
         try {
             if (Files.exists(keyPath)) {
-                // load existing key
                 var keyData = mapper.readValue(keyPath.toFile(), java.util.Map.class);
                 String privHex = (String) keyData.get("privateKey");
                 String pubHex = (String) keyData.get("publicKey");
+                byte[] keyBytes = HashUtil.fromHex(privHex);
+                if (keyBytes.length != 32) {
+                    System.out.println("Validator key corrupted (length " + keyBytes.length + "), regenerating...");
+                    Files.deleteIfExists(keyPath);
+                    return generateNewValidatorKey(keyPath);
+                }
                 System.out.println("Validator key loaded from " + keyPath);
-                System.out.println("Validator address: " + pubHex.substring(0, 16) + "...");
-                return HashUtil.fromHex(privHex);
+                System.out.println("Validator address: " + pubHex.substring(0, Math.min(16, pubHex.length())) + "...");
+                return keyBytes;
             }
-        } catch (IOException e) {
-            System.out.println("Error loading validator key, generating new one...");
+        } catch (Exception e) {
+            System.out.println("Error loading validator key: " + e.getMessage() + ", regenerating...");
+            try { Files.deleteIfExists(keyPath); } catch (IOException ignored) {}
+            return generateNewValidatorKey(keyPath);
         }
+        return generateNewValidatorKey(keyPath);
+    }
 
-        // generate new key
+    private byte[] generateNewValidatorKey(Path keyPath) {
         var keyPair = crypto.generateKeyPair();
         try {
             Files.createDirectories(Path.of("data"));

@@ -1,6 +1,5 @@
 package org.example.infrastructure.crypto;
 
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -30,27 +29,32 @@ public final class HashUtil {
         return toHex(sha256(input));
     }
 
+    private static final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
+
     public static String toHex(byte[] bytes) {
-        BigInteger number = new BigInteger(1, bytes);
-        StringBuilder hex = new StringBuilder(number.toString(16));
-        while (hex.length() < 64) {
-            hex.insert(0, '0');
+        char[] hex = new char[bytes.length * 2];
+        for (int i = 0; i < bytes.length; i++) {
+            int v = bytes[i] & 0xFF;
+            hex[i * 2] = HEX_CHARS[v >>> 4];
+            hex[i * 2 + 1] = HEX_CHARS[v & 0x0F];
         }
-        return hex.toString();
+        return new String(hex);
     }
 
     public static byte[] fromHex(String hex) {
-        byte[] bytes = new BigInteger(hex, 16).toByteArray();
-        if (bytes.length == 32) return bytes;
-        if (bytes.length == 33 && bytes[0] == 0) {
-            // trim leading zero byte from BigInteger's two's complement
-            byte[] trimmed = new byte[32];
-            System.arraycopy(bytes, 1, trimmed, 0, 32);
-            return trimmed;
+        if (hex == null || hex.isEmpty()) return new byte[0];
+        // remove leading zeros padding if any
+        hex = hex.length() % 2 != 0 ? "0" + hex : hex;
+        int len = hex.length() / 2;
+        byte[] bytes = new byte[len];
+        for (int i = 0; i < len; i++) {
+            int high = Character.digit(hex.charAt(i * 2), 16);
+            int low = Character.digit(hex.charAt(i * 2 + 1), 16);
+            if (high == -1 || low == -1) {
+                throw new IllegalArgumentException("Invalid hex character in: " + hex);
+            }
+            bytes[i] = (byte) ((high << 4) | low);
         }
-        // for other sizes, right-align to 32 bytes
-        byte[] result = new byte[32];
-        System.arraycopy(bytes, Math.max(0, bytes.length - 32), result, Math.max(0, 32 - bytes.length), Math.min(32, bytes.length));
-        return result;
+        return bytes;
     }
 }

@@ -1,10 +1,12 @@
 package org.example.application;
 
+import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.example.domain.chain.BlockStorage;
 import org.example.domain.consensus.ConsensusEngine;
 import org.example.domain.crypto.CryptoProvider;
 import org.example.domain.model.Block;
 import org.example.domain.model.Transaction;
+import org.example.infrastructure.crypto.HashUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +43,7 @@ public class NodeService {
             } catch (Exception e) {
                 log.error("Block production error: {}", e.getMessage());
             }
-        }, 10, 30, TimeUnit.SECONDS);
+        }, 10, 10, TimeUnit.SECONDS);
 
         // schedule heartbeat
         scheduler.scheduleAtFixedRate(() -> {
@@ -76,7 +78,8 @@ public class NodeService {
         Block block = consensus.produceBlock(nextIndex, pending, previousHash, validatorPrivateKey);
 
         // validate and append
-        byte[] validatorPubKey = crypto.sign(validatorPrivateKey, "pubkey-derive".getBytes());
+        Ed25519PrivateKeyParameters privKey = new Ed25519PrivateKeyParameters(validatorPrivateKey);
+        byte[] validatorPubKey = privKey.generatePublicKey().getEncoded();
         if (consensus.validateBlock(block, validatorPubKey)) {
             storage.appendBlock(block);
             for (Transaction tx : pending) {
