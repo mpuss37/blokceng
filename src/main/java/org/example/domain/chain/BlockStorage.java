@@ -29,6 +29,8 @@ public interface BlockStorage {
 
     void removePendingTransaction(String transactionId);
 
+    void reloadPending();
+
     void createSnapshot(String path);
 
     void restoreFromSnapshot(String path);

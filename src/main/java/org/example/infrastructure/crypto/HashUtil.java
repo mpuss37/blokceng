@@ -40,6 +40,17 @@ public final class HashUtil {
     }
 
     public static byte[] fromHex(String hex) {
-        return new BigInteger(hex, 16).toByteArray();
+        byte[] bytes = new BigInteger(hex, 16).toByteArray();
+        if (bytes.length == 32) return bytes;
+        if (bytes.length == 33 && bytes[0] == 0) {
+            // trim leading zero byte from BigInteger's two's complement
+            byte[] trimmed = new byte[32];
+            System.arraycopy(bytes, 1, trimmed, 0, 32);
+            return trimmed;
+        }
+        // for other sizes, right-align to 32 bytes
+        byte[] result = new byte[32];
+        System.arraycopy(bytes, Math.max(0, bytes.length - 32), result, Math.max(0, 32 - bytes.length), Math.min(32, bytes.length));
+        return result;
     }
 }

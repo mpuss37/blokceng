@@ -106,6 +106,12 @@ public class JsonBlockStorage implements BlockStorage {
     }
 
     @Override
+    public void reloadPending() {
+        pendingTransactions.clear();
+        loadPending();
+    }
+
+    @Override
     public void createSnapshot(String path) {
         try {
             Map<String, Object> snapshot = new HashMap<>();

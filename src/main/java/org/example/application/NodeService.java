@@ -57,6 +57,9 @@ public class NodeService {
     }
 
     public void produceBlock(byte[] validatorPrivateKey, List<String> validatorCandidates) {
+        // reload pending from file (other processes may have added votes)
+        storage.reloadPending();
+
         List<Transaction> pending = storage.getPendingTransactions();
         if (pending.isEmpty()) {
             log.debug("No pending transactions, skipping block production");
