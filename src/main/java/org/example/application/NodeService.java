@@ -82,6 +82,8 @@ public class NodeService implements P2pNetwork.NetworkMessageListener {
             return;
         }
 
+        log.info("Producing block: {} pending txs, chain={}", pending.size(), storage.blockCount());
+
         int nextIndex = storage.blockCount();
         String previousHash = storage.readBlock(nextIndex - 1)
                 .map(Block::hash)
@@ -91,7 +93,9 @@ public class NodeService implements P2pNetwork.NetworkMessageListener {
 
         Ed25519PrivateKeyParameters privKey = new Ed25519PrivateKeyParameters(validatorPrivateKey);
         byte[] validatorPubKey = privKey.generatePublicKey().getEncoded();
-        if (consensus.validateBlock(block, validatorPubKey)) {
+        boolean valid = consensus.validateBlock(block, validatorPubKey);
+
+        if (valid) {
             storage.appendBlock(block);
             for (Transaction tx : pending) {
                 storage.removePendingTransaction(tx.transactionId());
@@ -103,7 +107,7 @@ public class NodeService implements P2pNetwork.NetworkMessageListener {
                 p2pNetwork.broadcastBlock(block);
             }
         } else {
-            log.warn("Block validation failed");
+            log.warn("Block #{} validation FAILED — not appending", block.index());
         }
     }
 

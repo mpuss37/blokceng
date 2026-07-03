@@ -247,21 +247,42 @@ public class CliRouter {
 
     private void handleChain(String[] args) {
         if (args.length == 0) {
-            System.out.println("Usage: chain info|validate");
+            System.out.println("Usage: chain info|validate [--api <url>]");
             return;
         }
+        String apiUrl = getArg(args, "--api", null);
         switch (args[0]) {
             case "info" -> {
-                var storage = nodeService.getStorage();
-                System.out.println("Chain size: " + storage.blockCount());
-                System.out.println("Pending transactions: " + storage.getPendingTransactions().size());
-                System.out.println("Valid: " + true);
+                if (apiUrl != null) {
+                    queryChainFromApi(apiUrl);
+                } else {
+                    var storage = nodeService.getStorage();
+                    storage.reloadBlocks();
+                    System.out.println("Chain size: " + storage.blockCount());
+                    System.out.println("Pending transactions: " + storage.getPendingTransactions().size());
+                }
             }
             case "validate" -> {
                 System.out.println("Validating chain...");
                 System.out.println("Chain is valid.");
             }
             default -> System.out.println("Unknown chain command: " + args[0]);
+        }
+    }
+
+    private void queryChainFromApi(String apiUrl) {
+        try {
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(apiUrl + "/status"))
+                    .GET().build();
+            java.net.http.HttpResponse<String> resp = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+            var result = mapper.readValue(resp.body(), java.util.Map.class);
+            System.out.println("Chain size: " + result.get("chainSize"));
+            System.out.println("Pending transactions: " + result.get("pendingTx"));
+            System.out.println("Status: " + result.get("status"));
+        } catch (Exception e) {
+            System.out.println("Error querying API: " + e.getMessage());
         }
     }
 
