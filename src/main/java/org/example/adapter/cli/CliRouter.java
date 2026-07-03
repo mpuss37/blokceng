@@ -23,7 +23,7 @@ public class CliRouter {
     private final WalletService walletService;
     private final VotingService votingService;
     private final NodeService nodeService;
-    private final P2pNetwork p2pNetwork;
+    private P2pNetwork p2pNetwork;
     private final CryptoProvider crypto;
     private final String defaultNodeId;
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new ParameterNamesModule());
@@ -115,8 +115,12 @@ public class CliRouter {
     }
 
     private void sendVoteRemote(String nodeUrl, String walletName, String passphrase, String electionId, String candidateId) throws Exception {
+        Wallet wallet = walletService.loadWallet(walletName);
         var voteData = java.util.Map.of(
-                "wallet", walletName,
+                "publicKey", wallet.publicKey(),
+                "encryptedPrivateKey", wallet.encryptedPrivateKey(),
+                "iv", wallet.iv(),
+                "address", wallet.address(),
                 "pass", passphrase,
                 "election", electionId,
                 "candidate", candidateId
@@ -148,6 +152,7 @@ public class CliRouter {
         if ("start".equals(args[0])) {
             int port = 8080;
             int apiPort = 8000;
+            List<String> bootstrapPeers = List.of();
             String nodeId = p2pNetwork instanceof org.example.infrastructure.network.TcpP2pNetwork tcp
                     ? tcp.getNodeId() : defaultNodeId;
 
@@ -158,6 +163,8 @@ public class CliRouter {
                     apiPort = Integer.parseInt(args[i + 1]);
                 } else if ("--id".equals(args[i])) {
                     nodeId = args[i + 1];
+                } else if ("--bootstrap".equals(args[i])) {
+                    bootstrapPeers = List.of(args[i + 1].split(","));
                 }
             }
 
@@ -165,7 +172,7 @@ public class CliRouter {
             final int finalApiPort = apiPort;
 
             // start API server in daemon thread (same JVM = same storage instance)
-            ApiServer apiServer = new ApiServer(nodeService.getStorage(), votingService, walletService);
+            ApiServer apiServer = new ApiServer(nodeService.getStorage(), votingService, walletService, nodeService);
             Thread apiThread = new Thread(() -> {
                 try { apiServer.start(finalApiPort); } catch (Exception e) { System.err.println("API error: " + e.getMessage()); }
             }, "api-server");
@@ -174,6 +181,14 @@ public class CliRouter {
 
             System.out.println("Node: " + nodeId);
             System.out.println("P2P: port " + port + " | API: http://0.0.0.0:" + apiPort);
+            if (!bootstrapPeers.isEmpty()) {
+                System.out.println("Bootstrap: " + String.join(", ", bootstrapPeers));
+                P2pNetwork bootstrapNetwork = new org.example.infrastructure.network.TcpP2pNetwork(nodeId, bootstrapPeers);
+                nodeService.setP2pNetwork(bootstrapNetwork);
+                p2pNetwork = bootstrapNetwork;
+            } else {
+                nodeService.setP2pNetwork(p2pNetwork);
+            }
             p2pNetwork.start(port);
             nodeService.start(validatorPrivateKey, List.of());
             System.out.println("Node running. Press Ctrl+C to stop.");

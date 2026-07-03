@@ -1,5 +1,6 @@
 package org.example.adapter.api;
 
+import org.example.application.NodeService;
 import org.example.application.VotingService;
 import org.example.application.WalletService;
 import org.example.domain.chain.BlockStorage;
@@ -19,6 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 
 public class ApiServer {
@@ -26,14 +28,16 @@ public class ApiServer {
     private final BlockStorage storage;
     private final VotingService votingService;
     private final WalletService walletService;
+    private final NodeService nodeService;
     private final ObjectMapper mapper = new ObjectMapper()
             .registerModule(new ParameterNamesModule())
             .enable(SerializationFeature.INDENT_OUTPUT);
 
-    public ApiServer(BlockStorage storage, VotingService votingService, WalletService walletService) {
+    public ApiServer(BlockStorage storage, VotingService votingService, WalletService walletService, NodeService nodeService) {
         this.storage = storage;
         this.votingService = votingService;
         this.walletService = walletService;
+        this.nodeService = nodeService;
     }
 
     public void start(int port) throws Exception {
@@ -73,20 +77,30 @@ public class ApiServer {
                 }
                 var json = mapper.readValue(sb.toString(), java.util.Map.class);
 
-                String walletName = (String) json.get("wallet");
-                String passphrase = (String) json.getOrDefault("pass", "");
                 String electionId = (String) json.get("election");
                 String candidateId = String.valueOf(json.get("candidate"));
+                String passphrase = (String) json.getOrDefault("pass", "");
 
-                if (walletName == null || electionId == null || candidateId == null) {
+                if (electionId == null || candidateId == null) {
                     resp.setStatus(400);
-                    mapper.writeValue(resp.getWriter(), java.util.Map.of("error", "Missing required fields: wallet, election, candidate"));
+                    mapper.writeValue(resp.getWriter(), java.util.Map.of("error", "Missing required fields: election, candidate"));
                     return;
                 }
 
-                Wallet wallet = walletService.loadWallet(walletName);
+                // build wallet from request data (no file access needed)
+                Wallet wallet = new Wallet(
+                        "remote",
+                        (String) json.get("publicKey"),
+                        java.util.Base64.getDecoder().decode((String) json.get("encryptedPrivateKey")),
+                        java.util.Base64.getDecoder().decode((String) json.get("iv")),
+                        (String) json.get("address")
+                );
                 byte[] privateKey = walletService.loadPrivateKey(wallet, passphrase);
                 Transaction tx = votingService.castVote(wallet, privateKey, electionId, candidateId, List.of());
+
+                if (nodeService != null) {
+                    nodeService.broadcastTransaction(tx);
+                }
 
                 resp.setStatus(201);
                 mapper.writeValue(resp.getWriter(), java.util.Map.of(
