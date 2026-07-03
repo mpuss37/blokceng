@@ -1,145 +1,64 @@
 package org.example;
 
-import org.example.data.Block;
-import org.example.node.ApiServer;
-import org.example.node.Node;
-import org.example.user.KeyPairGenerator;
-import org.example.user.User;
-import org.json.JSONObject;
+import org.example.adapter.api.ApiServer;
+import org.example.adapter.cli.CliRouter;
+import org.example.application.NodeService;
+import org.example.application.VotingService;
+import org.example.application.WalletService;
+import org.example.domain.chain.BlockStorage;
+import org.example.domain.consensus.ConsensusEngine;
+import org.example.domain.crypto.*;
+import org.example.infrastructure.chain.JsonBlockStorage;
+import org.example.infrastructure.config.AppConfig;
+import org.example.infrastructure.consensus.ProofOfAuthority;
+import org.example.infrastructure.crypto.*;
 
-import java.io.File;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.util.Scanner;
+import java.util.Arrays;
 
 public class Main {
 
-    public Scanner scanner = new Scanner(System.in);
-    static KeyPairGenerator keyPairGenerator = new KeyPairGenerator();
-    static User user = new User();
-    static Node node = new Node();
-    static ApiServer apiServer = new ApiServer();
-    Block block = new Block();
-
-    public static String data, publicKeyUser, privateKeyUser, date, inputData;
-    public File file;
-    public JSONObject jsonObject;
-    public PublicKey publicKey;
-    public PrivateKey privateKey;
-    static public String nameFile;
-    public boolean exit, valid;
-
-    private void menu(int choiceMenu) {
-        exit = false;
-        valid = false;
-        int choice;
-        if (choiceMenu == 1) {
-            while (!exit) {
-                //if exit is true, not looping
-                System.out.println("=== MENU USER ===");
-                System.out.println("1. get-key");
-                System.out.println("2. count-data");
-                System.out.println("0. exit");
-                while (!valid) {
-                    //if valid is true, not looping
-                    System.out.print("choose option : ");
-                    try {
-                        choice = Integer.parseInt(scanner.nextLine());
-                        valid = true;
-                        switch (choice) {
-                            case 1:
-                                keyPairGenerator.setKey();
-                                break;
-                            case 2:
-                                String hash = "89b5f71a4f9b1d15d15020864b1d8f9ee10c40d81a2ffe3772994bfe1aee461a";
-                                String data = user.getHashData(hash);
-                                System.out.println("Fetched data: " + data);
-                                break;
-                            case 0:
-                                exit = true;
-                                break;
-                            default:
-                                System.out.println("your input not valid.");
-                                break;
-                        }
-                    } catch (NumberFormatException e) {
-                        System.out.println("the input entered is not a number, try again.");
-                    }
-                }
-                valid = false;
-                System.out.println();
-            }
-        } else {
-            while (!exit) {
-                //if exit is true, not looping
-                System.out.println("=== MENU NODE ===");
-                System.out.println("1. running-node");
-                System.out.println("2. testing");
-                System.out.println("0. exit");
-                while (!valid) {
-                    //if valid is true, not looping
-                    System.out.print("choose option : ");
-                    try {
-                        choice = Integer.parseInt(scanner.nextLine());
-                        valid = true;
-                        switch (choice) {
-                            case 1:
-                                node.runningNode();
-                                break;
-                            case 2:
-                                break;
-                            case 0:
-                                exit = true;
-                                break;
-                            default:
-                                System.out.println("your input not valid.");
-                                break;
-                        }
-                    } catch (NumberFormatException e) {
-                        System.out.println("the input entered is not a number, try again.");
-                    }
-                }
-                valid = false;
-                System.out.println();
-            }
-        }
-        scanner.close();
-        System.out.println("Thanks all");
-    }
-
     public static void main(String[] args) {
-        Main main = new Main();
+        // load config
+        AppConfig config = AppConfig.load();
 
-        if (args.length >= 1 && (args[0].equals("-u") || args[0].equals("--user"))) {
-            main.menu(1);
-        } else if (args.length >= 1 && (args[0].equals("-n") || args[0].equals("--node"))) {
-            main.menu(0);
-        } else if (args.length >= 3 && (args[0].equals("-d") || args[0].equals("--digital-sign"))) {
-            nameFile = String.valueOf(args[1]);
-            data = String.valueOf(args[2]);
-            user.createDigitalSign(nameFile, data);
-            //create digital-sign
-        } else if (args.length >= 3 && (args[0].equals("-s") || args[0].equals("--send"))) {
-            nameFile = String.valueOf(args[1]);
-            data = String.valueOf(args[2]);
-            String ipAddr = user.sendingData(nameFile, data);
-            //sending data to node
-        } else if (args.length == 1 && (args[0].equals("-a") || args[0].equals("--api"))) {
-            apiServer.RunEndpointApi();
-        } else if (args.length == 1 && (args[0].equals("-h") || args[0].equals("--help"))) {
-            System.out.println("blokceng (version 1.0, revision 1)");
-            System.out.println("""
-                    Usage:
-                     blokceng [OPTIONS]...[VALUES]\t
-                      -u, --user    become a user.
-                      -n, --node     become a node.
-                      -d, --digital-sign [key] [data]     create digital-sign.
-                      -s, --send [digital-sign]     send data to node.
-                      -a, --api     start the API server.
-                    """);
-        } else {
-            System.out.println("blokceng: missing operand\n" + "Try 'blokceng -h or --help' for more information.");
+        // --- dependency injection ---
+        CryptoProvider crypto = new Ed25519CryptoProvider();
+        MerkleTreeProvider merkleTree = new MerkleTree();
+        VrfProvider vrf = new Ed25519VrfProvider(crypto);
+        LinkableRingSignatureProvider lrs = new LinkableRingSignatureImpl(crypto);
+        BlockStorage storage = new JsonBlockStorage();
+        ConsensusEngine consensus = new ProofOfAuthority(crypto, vrf, merkleTree);
+
+        // --- services ---
+        WalletService walletService = new WalletService(crypto);
+        VotingService votingService = new VotingService(crypto, lrs, storage);
+        NodeService nodeService = new NodeService(crypto, consensus, storage);
+
+        // --- CLI routing ---
+        CliRouter cli = new CliRouter(walletService, votingService, nodeService);
+
+        if (args.length == 0) {
+            cli.printHelp();
+            return;
         }
 
+        // check if it's the API server command
+        if ("api".equals(args[0]) && args.length > 1 && "start".equals(args[1])) {
+            int port = config.apiPort();
+            for (int i = 2; i < args.length - 1; i++) {
+                if ("--port".equals(args[i])) {
+                    port = Integer.parseInt(args[i + 1]);
+                }
+            }
+            try {
+                new ApiServer(storage).start(port);
+            } catch (Exception e) {
+                System.err.println("API server error: " + e.getMessage());
+            }
+            return;
+        }
+
+        // route all other commands
+        cli.route(args);
     }
 }

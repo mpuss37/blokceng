@@ -1,30 +1,55 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 group = 'org.example'
-version = '1.0-SNAPSHOT'
+version = '2.0.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+application {
+    mainClass = 'org.example.Main'
+}
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    // Crypto
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.78'
+
+    // JSON
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0'
+
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.13'
+    runtimeOnly 'ch.qos.logback:logback-classic:1.5.6'
+
+    // HTTP
+    implementation 'org.eclipse.jetty:jetty-servlet:11.0.21'
+    implementation 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+
+    // Testing
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    implementation group: 'org.json', name: 'json', version: '20240303'
-    implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '11.0.21'
-    testImplementation group: 'org.slf4j', name: 'slf4j-nop', version: '2.0.13'
 }
 
 jar {
     manifest {
         attributes 'Main-Class': 'org.example.Main'
     }
-
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.EC'
 }
 
 test {
