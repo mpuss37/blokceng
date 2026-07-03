@@ -70,8 +70,9 @@ public class VotingService {
                 System.currentTimeMillis()
         );
 
-        // save to pending pool
+        // save to pending pool + register nullifier immediately
         storage.savePendingTransaction(tx);
+        storage.saveNullifier(electionId, nullifierSeed);
 
         return tx;
     }
@@ -96,24 +97,35 @@ public class VotingService {
     }
 
     public VoteTally tallyVotes(String electionId) {
-        List<Block> allBlocks = storage.readAllBlocks();
-        int[] counts = new int[100]; // pon ytail: fixed size, use map in production
+        int[] counts = new int[100];
 
+        // count from committed blocks
+        List<Block> allBlocks = storage.readAllBlocks();
         for (Block block : allBlocks) {
             for (Transaction tx : block.transactions()) {
-                if (tx.electionId().equals(electionId)) {
-                    try {
-                        int candidateIndex = Integer.parseInt(tx.candidateId());
-                        if (candidateIndex >= 0 && candidateIndex < counts.length) {
-                            counts[candidateIndex]++;
-                        }
-                    } catch (NumberFormatException e) {
-                        // skip non-numeric candidate IDs
-                    }
-                }
+                countTx(tx, electionId, counts);
             }
         }
+
+        // also count from pending transactions
+        for (Transaction tx : storage.getPendingTransactions()) {
+            countTx(tx, electionId, counts);
+        }
+
         return new VoteTally(electionId, counts);
+    }
+
+    private void countTx(Transaction tx, String electionId, int[] counts) {
+        if (tx.electionId().equals(electionId)) {
+            try {
+                int candidateIndex = Integer.parseInt(tx.candidateId());
+                if (candidateIndex >= 0 && candidateIndex < counts.length) {
+                    counts[candidateIndex]++;
+                }
+            } catch (NumberFormatException e) {
+                // skip non-numeric candidate IDs
+            }
+        }
     }
 
     public record VoteTally(String electionId, int[] candidateVotes) {}

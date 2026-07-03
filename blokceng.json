@@ -1,0 +1,10 @@
+{
+  "nodeId" : "node-1783087747507",
+  "p2pPort" : 8080,
+  "apiPort" : 8000,
+  "bootstrapPeers" : [ ],
+  "dataDir" : "data",
+  "logLevel" : "INFO",
+  "maxPeers" : 50,
+  "heartbeatIntervalMs" : 30000
+}

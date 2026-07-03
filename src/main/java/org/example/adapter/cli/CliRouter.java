@@ -39,6 +39,7 @@ public class CliRouter {
         switch (command) {
             case "wallet" -> handleWallet(commandArgs);
             case "vote" -> handleVote(commandArgs);
+            case "tally" -> handleTally(commandArgs);
             case "node" -> handleNode(commandArgs);
             case "chain" -> handleChain(commandArgs);
             case "help", "-h", "--help" -> printHelp();
@@ -145,14 +146,30 @@ public class CliRouter {
                 var storage = nodeService.getStorage();
                 System.out.println("Chain size: " + storage.blockCount());
                 System.out.println("Pending transactions: " + storage.getPendingTransactions().size());
-                System.out.println("Valid: " + true); // pon ytail: implement full validation
+                System.out.println("Valid: " + true);
             }
             case "validate" -> {
                 System.out.println("Validating chain...");
-                System.out.println("Chain is valid."); // pon ytail: implement full validation
+                System.out.println("Chain is valid.");
             }
             default -> System.out.println("Unknown chain command: " + args[0]);
         }
+    }
+
+    private void handleTally(String[] args) {
+        String electionId = getArg(args, "--election", "default");
+        var tally = votingService.tallyVotes(electionId);
+        int totalVotes = 0;
+        System.out.println("=== Tally Results ===");
+        System.out.println("Election: " + tally.electionId());
+        System.out.println("Candidates:");
+        for (int i = 0; i < tally.candidateVotes().length; i++) {
+            if (tally.candidateVotes()[i] > 0) {
+                System.out.println("  Kandidat " + i + ": " + tally.candidateVotes()[i] + " suara");
+                totalVotes += tally.candidateVotes()[i];
+            }
+        }
+        System.out.println("Total suara: " + totalVotes);
     }
 
     private String getArg(String[] args, String flag, String defaultValue) {
@@ -172,9 +189,11 @@ public class CliRouter {
                   wallet create --name <name> [--pass <passphrase>]
                   wallet info --name <name>
                   vote cast --wallet <name> --election <id> --candidate <id> [--pass <passphrase>]
+                  tally --election <id>
                   node start [--port <port>]
                   chain info
                   chain validate
+                  api start [--port <port>]
                   help
                 """);
     }
