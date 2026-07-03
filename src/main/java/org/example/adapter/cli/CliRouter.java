@@ -69,15 +69,23 @@ public class CliRouter {
             case "create" -> {
                 String name = getArg(args, "--name", "default");
                 String passphrase = getArg(args, "--pass", "");
-                Wallet wallet = walletService.createWallet(name, passphrase);
-                System.out.println("Wallet created: " + wallet.walletId());
-                System.out.println("Address: " + wallet.address());
+                try {
+                    Wallet wallet = walletService.createWallet(name, passphrase);
+                    System.out.println("Wallet created: " + wallet.walletId());
+                    System.out.println("Address: " + wallet.address());
+                } catch (IllegalStateException e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
             }
             case "info" -> {
                 String name = getArg(args, "--name", "default");
-                Wallet wallet = walletService.loadWallet(name);
-                System.out.println("Wallet: " + wallet.walletId());
-                System.out.println("Address: " + wallet.address());
+                try {
+                    Wallet wallet = walletService.loadWallet(name);
+                    System.out.println("Wallet: " + wallet.walletId());
+                    System.out.println("Address: " + wallet.address());
+                } catch (RuntimeException e) {
+                    System.out.println("Error: Wallet '" + name + "' not found.");
+                }
             }
             default -> System.out.println("Unknown wallet command: " + args[0]);
         }

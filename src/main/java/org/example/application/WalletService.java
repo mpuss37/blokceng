@@ -21,6 +21,11 @@ public class WalletService {
     }
 
     public Wallet createWallet(String name, String passphrase) {
+        Path walletPath = Path.of(name + ".wallet.json");
+        if (Files.exists(walletPath)) {
+            throw new IllegalStateException("Wallet '" + name + "' already exists. Choose a different name.");
+        }
+
         KeyPair keyPair = crypto.generateKeyPair();
 
         // encrypt private key with passphrase
