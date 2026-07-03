@@ -42,16 +42,13 @@ public class ProofOfAuthority implements ConsensusEngine {
     }
 
     @Override
-    public Block produceBlock(List<Transaction> transactions, String previousHash, byte[] validatorPrivateKey) {
+    public Block produceBlock(int blockIndex, List<Transaction> transactions, String previousHash, byte[] validatorPrivateKey) {
         // compute merkle root from transactions
         List<String> txHashes = new ArrayList<>();
         for (Transaction tx : transactions) {
             txHashes.add(HashUtil.sha256Hex(tx.transactionId()));
         }
         String merkleRoot = merkleTree.computeRoot(txHashes);
-
-        // determine block index
-        int index = 0; // caller should provide this, but simplified here
 
         // generate VRF proof
         String seed = previousHash + "|" + System.currentTimeMillis();
@@ -63,14 +60,14 @@ public class ProofOfAuthority implements ConsensusEngine {
         String validatorId = HashUtil.toHex(validatorPubKey);
 
         // sign the block
-        String blockContent = index + "|" + previousHash + "|" + merkleRoot + "|" + validatorId;
+        String blockContent = blockIndex + "|" + previousHash + "|" + merkleRoot + "|" + validatorId;
         byte[] signature = crypto.sign(validatorPrivateKey, blockContent.getBytes(StandardCharsets.UTF_8));
 
         // compute block hash
         String hash = HashUtil.sha256Hex(blockContent);
 
         return new Block(
-                index,
+                blockIndex,
                 System.currentTimeMillis(),
                 List.copyOf(transactions),
                 previousHash,

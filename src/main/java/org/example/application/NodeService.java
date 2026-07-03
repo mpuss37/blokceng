@@ -63,23 +63,24 @@ public class NodeService {
             return;
         }
 
-        // get previous hash
-        String previousHash = storage.readBlock(storage.blockCount() - 1)
+        // get previous hash and next block index
+        int nextIndex = storage.blockCount();
+        String previousHash = storage.readBlock(nextIndex - 1)
                 .map(Block::hash)
                 .orElse("0");
 
         // produce block
-        Block block = consensus.produceBlock(pending, previousHash, validatorPrivateKey);
+        Block block = consensus.produceBlock(nextIndex, pending, previousHash, validatorPrivateKey);
 
         // validate and append
         byte[] validatorPubKey = crypto.sign(validatorPrivateKey, "pubkey-derive".getBytes());
         if (consensus.validateBlock(block, validatorPubKey)) {
             storage.appendBlock(block);
-            // remove pending transactions that are now in the block
             for (Transaction tx : pending) {
                 storage.removePendingTransaction(tx.transactionId());
             }
-            log.info("Block #{} produced, hash: {}", block.index(), block.hash());
+            log.info("Block #{} produced, {} transactions, hash: {}",
+                    block.index(), block.transactions().size(), block.hash().substring(0, 16) + "...");
         } else {
             log.warn("Block validation failed, not appending");
         }

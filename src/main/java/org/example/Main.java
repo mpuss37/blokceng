@@ -38,7 +38,7 @@ public class Main {
         NodeService nodeService = new NodeService(crypto, consensus, storage);
 
         // --- CLI routing ---
-        CliRouter cli = new CliRouter(walletService, votingService, nodeService, p2pNetwork, config.nodeId());
+        CliRouter cli = new CliRouter(walletService, votingService, nodeService, p2pNetwork, crypto, config.nodeId());
 
         if (args.length == 0) {
             cli.printHelp();

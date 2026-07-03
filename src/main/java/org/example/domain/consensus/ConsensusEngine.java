@@ -9,7 +9,7 @@ public interface ConsensusEngine {
 
     String selectValidator(List<String> candidatePublicKeys, byte[] seed);
 
-    Block produceBlock(List<Transaction> transactions, String previousHash, byte[] validatorPrivateKey);
+    Block produceBlock(int blockIndex, List<Transaction> transactions, String previousHash, byte[] validatorPrivateKey);
 
     boolean validateBlock(Block block, byte[] validatorPublicKey);
 }

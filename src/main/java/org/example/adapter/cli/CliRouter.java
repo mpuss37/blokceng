@@ -1,12 +1,19 @@
 package org.example.adapter.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.application.VotingService;
 import org.example.application.WalletService;
 import org.example.application.NodeService;
+import org.example.domain.crypto.CryptoProvider;
+import org.example.domain.model.KeyPair;
 import org.example.domain.model.Wallet;
 import org.example.domain.model.Transaction;
 import org.example.domain.network.P2pNetwork;
+import org.example.infrastructure.crypto.HashUtil;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
@@ -16,14 +23,17 @@ public class CliRouter {
     private final VotingService votingService;
     private final NodeService nodeService;
     private final P2pNetwork p2pNetwork;
+    private final CryptoProvider crypto;
     private final String defaultNodeId;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     public CliRouter(WalletService walletService, VotingService votingService, NodeService nodeService,
-                     P2pNetwork p2pNetwork, String defaultNodeId) {
+                     P2pNetwork p2pNetwork, CryptoProvider crypto, String defaultNodeId) {
         this.walletService = walletService;
         this.votingService = votingService;
         this.nodeService = nodeService;
         this.p2pNetwork = p2pNetwork;
+        this.crypto = crypto;
         this.defaultNodeId = defaultNodeId;
     }
 
@@ -100,7 +110,7 @@ public class CliRouter {
 
     private void handleNode(String[] args) {
         if (args.length == 0) {
-            System.out.println("Usage: node start [--port <port>] [--id <nodeId>] [--bootstrap <host:port,host:port>]");
+            System.out.println("Usage: node start [--port <port>] [--id <nodeId>]");
             return;
         }
         if ("start".equals(args[0])) {
@@ -116,11 +126,13 @@ public class CliRouter {
                 }
             }
 
+            // load or generate validator keypair
+            byte[] validatorPrivateKey = loadOrGenerateValidatorKey();
+
             System.out.println("Starting node: " + nodeId + " on port " + port);
-            System.out.println("To change nodeId, edit blokceng.json");
             p2pNetwork.start(port);
-            nodeService.start(null, List.of());
-            System.out.println("Node running. Press Ctrl+C to stop.");
+            nodeService.start(validatorPrivateKey, List.of());
+            System.out.println("Node running. Block production every 30s. Press Ctrl+C to stop.");
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 System.out.println("Shutting down node...");
@@ -134,6 +146,39 @@ public class CliRouter {
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    private byte[] loadOrGenerateValidatorKey() {
+        Path keyPath = Path.of("data", "validator-key.json");
+        try {
+            if (Files.exists(keyPath)) {
+                // load existing key
+                var keyData = mapper.readValue(keyPath.toFile(), java.util.Map.class);
+                String privHex = (String) keyData.get("privateKey");
+                String pubHex = (String) keyData.get("publicKey");
+                System.out.println("Validator key loaded from " + keyPath);
+                System.out.println("Validator address: " + pubHex.substring(0, 16) + "...");
+                return HashUtil.fromHex(privHex);
+            }
+        } catch (IOException e) {
+            System.out.println("Error loading validator key, generating new one...");
+        }
+
+        // generate new key
+        var keyPair = crypto.generateKeyPair();
+        try {
+            Files.createDirectories(Path.of("data"));
+            var keyData = java.util.Map.of(
+                    "privateKey", HashUtil.toHex(keyPair.privateKey()),
+                    "publicKey", HashUtil.toHex(keyPair.publicKey())
+            );
+            mapper.writeValue(keyPath.toFile(), keyData);
+            System.out.println("Validator key generated and saved to " + keyPath);
+            System.out.println("Validator address: " + HashUtil.toHex(keyPair.publicKey()).substring(0, 16) + "...");
+        } catch (IOException e) {
+            System.out.println("Warning: Could not save validator key: " + e.getMessage());
+        }
+        return keyPair.privateKey();
     }
 
     private void handleChain(String[] args) {
